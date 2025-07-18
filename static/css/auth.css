@@ -11,7 +11,7 @@
 
 .auth-page {
     margin: 0;
-    padding: 50px 20px;
+    padding: 0;
     height: 100vh;
     width: 100vw;
     display: flex;
@@ -376,9 +376,9 @@
 }
 
 /* Signup specific styles */
-/* .signup-box {
+.signup-box {
     max-width: 450px;
-} */
+}
 
 .auth-redirect-top {
     text-align: center;
