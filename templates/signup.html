@@ -8,52 +8,83 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
 </head>
-<body>
-    <div class="auth-page">
-        <div class="auth-container">
-            <div class="auth-left">
-                <div class="logo-container">
-                    <img src="logo.png" alt="Moodify Logo" class="logo">
-                    <h1 class="logo-text">Moodify</h1>
-                </div>
-                <p class="tagline">"Welcome to Moodify!<br>Let your emotions guide the<br>music as we tailor the perfect<br>playlist just for you"</p>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-left signup-right">
+            <div class="logo-container">
+                <h1 class="logo-text">Moodify</h1>
+                <img src="{{ url_for('static', filename='images/LogoFypS-01.png') }}" alt="Moodify Logo" class="logo">
             </div>
-            <div class="auth-right">
-                <div class="auth-box">
-                    <h2 class="auth-title">Create Account</h2>
-                    <p class="auth-subtitle">Join Moodify to discover your perfect music</p>
-                    <p class="auth-redirect-top">Already have an account? <a href="#">Sign In</a></p>
-                    <!-- Placeholder for flash messages -->
-                    <div class="alert alert-error" style="display: none;">Error message here</div>
-                    <form class="auth-form">
-                        <div class="form-row">
-                            <div class="form-group half">
-                                <input type="text" placeholder="Name" required>
-                            </div>
-                            <div class="form-group half">
-                                <input type="text" placeholder="User Name" required>
-                            </div>
+            <p class="tagline">
+                "Welcome to Moodify!<br>
+                Let your emotions guide the<br>
+                music as we tailor the perfect<br>
+                playlist just for you"
+            </p>
+        </div>
+        
+        <div class="auth-right signup-left">
+            <div class="auth-box signup-box">
+                <h2 class="auth-title">Create Account</h2>
+                <p class="auth-subtitle">Join Moodify to discover your perfect music</p>
+                
+                <p class="auth-redirect-top">Already have an account? <a href="{{ url_for('login') }}">Sign In</a></p>
+                
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="alert alert-error">
+                            {{ messages[0] }}
                         </div>
-                        <div class="form-group">
-                            <input type="email" placeholder="Email" required>
+                    {% endif %}
+                {% endwith %}
+                
+                <form method="POST" action="{{ url_for('signup') }}" class="auth-form">
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <input type="text" name="name" id="name" required 
+                                   placeholder="Name">
                         </div>
-                        <div class="form-group">
-                            <input type="password" placeholder="Password" required>
+                        
+                        <div class="form-group half">
+                            <input type="text" name="username" id="username" required 
+                                   placeholder="User Name">
                         </div>
-                        <div class="form-group">
-                            <input type="password" placeholder="Re Enter Password" required>
-                        </div>
-                        <button type="submit" class="auth-button">Sign Up</button>
-                    </form>
-                    <div class="auth-separator"><span>Or Sign up with</span></div>
-                    <div class="social-login">
-                        <a href="#" class="google-btn">
-                            <img src="google-icon.png" alt="Google"> Sign up with Google
-                        </a>
                     </div>
+                    
+                    <div class="form-group">
+                        <input type="email" name="email" id="email" required 
+                               placeholder="Email">
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="password" name="password" id="password" required 
+                               placeholder="Password">
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="password" name="confirm_password" id="confirm_password" required 
+                               placeholder="Re Enter Password">
+                    </div>
+                    
+                    <div class="form-submit">
+                        <button type="submit" class="auth-button">Sign Up</button>
+                    </div>
+                </form>
+                
+                <div class="auth-separator">
+                    <span>Or Sign up with</span>
+                </div>
+                
+                <div class="social-login">
+                    <a href="#" class="google-btn">
+                        <img src="{{ url_for('static', filename='images/google-icon.png') }}" alt="Google icon">
+                        Sign up with Google
+                    </a>
                 </div>
             </div>
         </div>
     </div>
+    
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 </body>
 </html>
