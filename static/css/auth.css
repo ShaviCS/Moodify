@@ -29,7 +29,7 @@
     display: flex;
     max-width: 1000px;
     width: 90%;
-    height: 600px;
+    height: 600px; /* Fixed height */
     background-color: #fff;
     border-radius: 20px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
@@ -63,6 +63,7 @@
     background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 60%);
     opacity: 0.6;
     z-index: 0;
+    pointer-events: none; /* Prevent interaction */
 }
 
 .logo-container {
@@ -110,12 +111,17 @@
 .auth-right {
     background: white;
     color: #333;
+    min-height: 600px; /* Match the auth-container height */
+    padding: 40px;
+    overflow-y: auto; /* Allow scrolling if content overflows */
 }
 
 .auth-box {
     max-width: 400px;
     width: 100%;
     margin: 0 auto;
+    position: relative;
+    z-index: 1; /* Ensure it stays above any overlays */
 }
 
 .auth-title {
