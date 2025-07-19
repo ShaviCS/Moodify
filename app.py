@@ -13,12 +13,31 @@ import uuid
 from functools import wraps
 from urllib.parse import urlparse
 import time
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer
+from datetime import datetime, timedelta
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))  # Secret key for sessions
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutes
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # or your email provider's SMTP server
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')  # Your email
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')  # Your email password or app password
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
+
+mail = Mail(app)
+
+# Create a serializer for generating secure tokens
+serializer = URLSafeTimedSerializer(app.secret_key)
+
 
 # Database setup with PostgreSQL
 def get_db_connection():
@@ -85,6 +104,19 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
+
+    # Add password reset tokens table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token TEXT NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    )
+    ''')
     
     conn.commit()
     cursor.close()
@@ -115,6 +147,170 @@ def load_model():
         print("Model loaded successfully!")
     except Exception as e:
         print(f"Error loading model: {str(e)}")
+
+# Helper function to send email
+def send_reset_email(user_email, reset_token):
+    """Send password reset email to user"""
+    try:
+        # Create reset URL
+        reset_url = url_for('reset_password', token=reset_token, _external=True)
+        
+        # Email content
+        subject = "Password Reset Request - Moodify"
+        body = f"""
+        Hello,
+
+        You requested to reset your password for your Moodify account.
+
+        Please click the link below to reset your password:
+        {reset_url}
+
+        This link will expire in 1 hour.
+
+        If you didn't request this password reset, please ignore this email.
+
+        Best regards,
+        The Moodify Team
+        """
+
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = app.config['MAIL_USERNAME']
+        msg['To'] = user_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Send email
+        server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'])
+        server.starttls()
+        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        server.send_message(msg)
+        server.quit()
+        
+        return True
+    except Exception as e:
+        print(f"Error sending email: {str(e)}")
+        return False
+
+# Route for forgot password page
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if 'user_id' in session:
+        return redirect(url_for('welcome'))
+    
+    if request.method == 'POST':
+        email = request.form['email']
+        
+        if not email:
+            flash('Please enter your email address')
+            return render_template('forgot_password.html')
+        
+        # Check if user exists
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+        user = cursor.fetchone()
+        
+        if user:
+            # Generate reset token
+            reset_token = serializer.dumps(email, salt='password-reset-salt')
+            token_id = str(uuid.uuid4())
+            expires_at = datetime.now() + timedelta(hours=1)
+            
+            # Store token in database
+            cursor.execute('''
+                INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
+                VALUES (%s, %s, %s, %s)
+            ''', (token_id, user['id'], reset_token, expires_at))
+            conn.commit()
+            
+            # Send reset email
+            if send_reset_email(email, reset_token):
+                flash('Password reset link has been sent to your email')
+            else:
+                flash('Error sending email. Please try again later')
+        else:
+            # Don't reveal if email exists or not for security
+            flash('If an account with this email exists, a password reset link has been sent')
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('forgot_password.html')
+    
+    return render_template('forgot_password.html')
+
+# Route for password reset page
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if 'user_id' in session:
+        return redirect(url_for('welcome'))
+    
+    try:
+        # Verify token (expires in 1 hour)
+        email = serializer.loads(token, salt='password-reset-salt', max_age=3600)
+    except:
+        flash('Invalid or expired reset link')
+        return redirect(url_for('forgot_password'))
+    
+    # Check if token exists and is not used
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT prt.*, u.email FROM password_reset_tokens prt
+        JOIN users u ON prt.user_id = u.id
+        WHERE prt.token = %s AND prt.used = FALSE AND prt.expires_at > %s
+    ''', (token, datetime.now()))
+    
+    token_record = cursor.fetchone()
+    
+    if not token_record:
+        cursor.close()
+        conn.close()
+        flash('Invalid or expired reset link')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        new_password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        
+        if not new_password or not confirm_password:
+            flash('Please fill in all fields')
+            return render_template('reset_password.html', token=token)
+        
+        if new_password != confirm_password:
+            flash('Passwords do not match')
+            return render_template('reset_password.html', token=token)
+        
+        if len(new_password) < 6:
+            flash('Password must be at least 6 characters long')
+            return render_template('reset_password.html', token=token)
+        
+        # Update user password
+        hashed_password = generate_password_hash(new_password)
+        
+        cursor.execute('''
+            UPDATE users SET password = %s WHERE email = %s
+        ''', (hashed_password, email))
+        
+        # Mark token as used
+        cursor.execute('''
+            UPDATE password_reset_tokens SET used = TRUE WHERE token = %s
+        ''', (token,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        flash('Password has been reset successfully. You can now login with your new password.')
+        return redirect(url_for('login'))
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('reset_password.html', token=token)
 
 # Function for get relevant songs from the database
 def get_songs_for_emotion(emotion):
