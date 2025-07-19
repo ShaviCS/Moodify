@@ -122,7 +122,6 @@
     margin: 0 auto;
     position: relative;
     z-index: 1;
-    padding-top: 60px; /* Increased top padding to add space above "Create Account" */
 }
 
 .auth-title {
@@ -385,6 +384,7 @@
 /* Signup specific styles */
 .signup-box {
     max-width: 450px;
+    padding-top: 60px;
 }
 
 .auth-redirect-top {
