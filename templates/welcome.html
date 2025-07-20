@@ -55,7 +55,7 @@
             </div>
             
             <h1>Welcome to Moodify</h1>
-            <p class="tagline">Discover music that matches your mood</p>
+            <p class="tagline">Discover your next favorite tune <br/>and let your emotions lead the way...</p>
             
             <div class="feature-cards">
                 <div class="feature-card">
@@ -80,6 +80,66 @@
             <a href="#detect-section" class="start-button">
                 Get Started <i class="fas fa-arrow-right"></i>
             </a>
+        </div>
+    </section>
+
+    <!-- Music Therapy Section -->
+    <section class="section music-therapy-section">
+        <div class="section-container">
+            <div class="music-therapy-content">
+                <div class="music-therapy-text">
+                    <h2 class="therapy-title">Come and Relax, 
+                        <span class="highlight-text">rewind your memories</span>
+                    </h2>
+                    <div class="therapy-description">
+                        <p>Music therapy is a powerful, evidence-based practice that uses music, sound, and rhythm to promote healing and improve well-being. It has been shown to reduce anxiety by 65%, enhance mood in dementia patients by 59%, and increase motor function in stroke survivors by 57%. Music therapy also aids in pain management, reducing pain during surgeries by 46% and increasing pain tolerance by 22%. It improves social interaction in children with disabilities by 38% and boosts self-esteem in pregnant women by 25%. For physical health, it lowers heart rates in critical-care patients and preterm infants by an average of 6–7 beats per minute, while also improving sleep quality for insomnia patients by 41%. With over 5,000 board-certified music therapists in the U.S., this growing field continues to provide significant benefits to individuals across various health conditions.</p>
+                    </div>
+                </div>
+                <div class="music-therapy-image">
+                    <img src="{{ url_for('static', filename='images/music-therapy-woman.jpg') }}" alt="Woman enjoying music therapy" class="therapy-image">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="section how-it-works-section">
+        <div class="section-container">
+            <h2 class="section-title">How It Works</h2>
+            
+            <div class="steps-container">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Choose Your Method</h3>
+                        <p>Use webcam, upload a photo, or select your mood directly</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Emotion Analysis</h3>
+                        <p>Our AI analyzes your emotional state</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Get Recommendations</h3>
+                        <p>Receive personalized music that matches your mood</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Enjoy Your Music</h3>
+                        <p>Listen instantly and elevate your mood</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -219,47 +279,7 @@
         </div>
     </section>
 
-    <!-- How It Works Section -->
-    <section class="section how-it-works-section">
-        <div class="section-container">
-            <h2 class="section-title">How It Works</h2>
-            
-            <div class="steps-container">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h3>Choose Your Method</h3>
-                        <p>Use webcam, upload a photo, or select your mood directly</p>
-                    </div>
-                </div>
-                
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h3>Emotion Analysis</h3>
-                        <p>Our AI analyzes your emotional state</p>
-                    </div>
-                </div>
-                
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h3>Get Recommendations</h3>
-                        <p>Receive personalized music that matches your mood</p>
-                    </div>
-                </div>
-                
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <div class="step-content">
-                        <h3>Enjoy Your Music</h3>
-                        <p>Listen instantly and elevate your mood</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
+    
     <footer class="main-footer">
         <p>© 2025 Moodify - Your Emotion-Based Music Recommender</p>
     </footer>
