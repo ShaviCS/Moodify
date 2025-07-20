@@ -15,7 +15,9 @@
     <header class="main-header">
         <div class="navbar">
             <div class="logo-nav">
-                <img src="{{ url_for('static', filename='images/LogoFypS-01.png') }}" alt="Moodify Logo" class="nav-logo">
+                <a href="#hero-section">
+                    <img src="{{ url_for('static', filename='images/LogoFypS-01.png') }}" alt="Moodify Logo" class="nav-logo">
+                </a>
             </div>
             
             <nav class="main-nav">
@@ -50,7 +52,7 @@
     </header>
 
     <!-- Hero Section -->
-    <section class="hero-section">
+    <section id="hero-section" class="hero-section">
         <div class="hero-content">
             <div class="logo-container">
                 <img src="{{ url_for('static', filename='images/LogoFypS-01.png') }}" alt="Moodify Logo" class="logo">
