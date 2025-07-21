@@ -1,4 +1,3 @@
-// Enhanced welcome page functionality
 document.addEventListener('DOMContentLoaded', function() {
     // Smooth scrolling for navigation links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -10,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (targetElement) {
                 window.scrollTo({
-                    top: targetElement.offsetTop - 80, // Offset for navbar height
+                    top: targetElement.offsetTop - 80,
                     behavior: 'smooth'
                 });
             }
@@ -41,13 +40,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const logoutBtn = document.getElementById('logoutBtn');
 
     if (userInfo && userDropdown) {
-        // Toggle dropdown when clicking on the user name/avatar
         userInfo.addEventListener('click', function(e) {
             userDropdown.classList.toggle('show');
             e.stopPropagation();
         });
 
-        // Close dropdown when clicking anywhere else on the page
         window.addEventListener('click', function() {
             if (userDropdown.classList.contains('show')) {
                 userDropdown.classList.remove('show');
@@ -56,10 +53,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (logoutBtn) {
-        // Handle logout functionality
         logoutBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            // You can add confirmation dialog if needed
             window.location.href = this.getAttribute('href');
         });
     }
@@ -78,12 +73,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (startCameraBtn && videoElement) {
         startCameraBtn.addEventListener('click', async function() {
             try {
-                // Stop any existing stream
                 if (stream) {
                     stream.getTracks().forEach(track => track.stop());
                 }
 
-                // Get user media with better constraints
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: {
                         width: { ideal: 640 },
@@ -103,7 +96,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 startCameraBtn.disabled = true;
                 captureImageBtn.disabled = false;
                 
-                // Add error listener to the video element
                 videoElement.addEventListener('error', (e) => {
                     console.error('Video error:', e);
                     alert('Camera error occurred. Please try again.');
@@ -124,14 +116,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             try {
-                // Create canvas and capture image
                 const canvas = document.createElement('canvas');
                 canvas.width = videoElement.videoWidth;
                 canvas.height = videoElement.videoHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
                 
-                // Convert to base64 with error handling
                 let imageData;
                 try {
                     imageData = canvas.toDataURL('image/jpeg', 0.8);
@@ -140,11 +130,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error('Failed to capture image');
                 }
 
-                // Show loading state
                 captureImageBtn.disabled = true;
                 captureImageBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-                // Send to backend for analysis
                 const response = await fetch('/process_emotion', {
                     method: 'POST',
                     headers: {
@@ -163,24 +151,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error(data.error);
                 }
                 
-                // Display the detected emotion
                 if (detectedEmotion) {
                     detectedEmotion.style.display = 'block';
                     emotionText.textContent = data.dominant_emotion;
-                    
-                    // Apply emotion specific styling
                     emotionText.className = '';
                     emotionText.classList.add(`emotion-text-${data.dominant_emotion.toLowerCase()}`);
                     
-                    // Store the captured image and emotion data
                     sessionStorage.setItem('capturedImage', imageData);
                     sessionStorage.setItem('detectedEmotion', data.dominant_emotion);
                     
-                    // Get songs from database
                     const songs = await getEmotionSongs(data.dominant_emotion);
                     sessionStorage.setItem('recommendations', JSON.stringify(songs));
                     
-                    // Show recommendations button
                     if (getRecommendationsBtn) {
                         getRecommendationsBtn.style.display = 'inline-flex';
                         getRecommendationsBtn.href = `/recommendations?emotion=${encodeURIComponent(data.dominant_emotion)}`;
@@ -190,16 +172,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error processing image:', error);
                 alert('Error processing image: ' + error.message);
             } finally {
-                // Reset button state
-                if (captureImageBtn) {
-                    captureImageBtn.disabled = false;
-                    captureImageBtn.innerHTML = '<i class="fas fa-camera-retro"></i> Capture Image';
-                }
+                captureImageBtn.disabled = false;
+                captureImageBtn.innerHTML = '<i class="fas fa-camera-retro"></i> Capture Image';
             }
         });
     }
 
-    // Clean up when leaving the page
     window.addEventListener('beforeunload', () => {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
@@ -217,12 +195,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadEmotionText = document.getElementById('uploadEmotionText');
     const uploadGetRecommendationsBtn = document.getElementById('uploadGetRecommendations');
 
-    // Handle file selection
     imageUpload.addEventListener('change', function() {
         if (this.files && this.files[0]) {
             const file = this.files[0];
             
-            // Validate file type
             if (!file.type.match('image.*')) {
                 alert('Please select an image file (JPEG, PNG, etc.)');
                 return;
@@ -231,15 +207,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const reader = new FileReader();
             
             reader.onload = function(e) {
-                // Display the selected image
                 imagePreview.src = e.target.result;
                 uploadArea.style.display = 'none';
                 previewContainer.style.display = 'block';
-                
-                // Show the detect emotion button
                 detectEmotionBtn.style.display = 'inline-flex';
-                
-                // Reset any previous results
                 uploadEmotionPlaceholder.style.display = 'block';
                 uploadDetectedEmotion.style.display = 'none';
             };
@@ -252,7 +223,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Handle drag and drop
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         uploadArea.addEventListener(eventName, preventDefaults, false);
     });
@@ -289,7 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Detect emotion from uploaded image
     detectEmotionBtn.addEventListener('click', async function() {
         if (!imagePreview.src || imagePreview.src === '#') {
             alert('Please upload an image first');
@@ -297,23 +266,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            // Show loading state
             detectEmotionBtn.disabled = true;
             detectEmotionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-            
-            // Hide placeholder and previous results
             uploadEmotionPlaceholder.style.display = 'none';
             uploadDetectedEmotion.style.display = 'none';
             
-            // Send image to server for processing
             const response = await fetch('/process_emotion', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
-                    image: imagePreview.src 
-                }),
+                body: JSON.stringify({ image: imagePreview.src }),
             });
 
             if (!response.ok) {
@@ -326,35 +289,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.error);
             }
             
-            // Display the detected emotion
             uploadEmotionText.textContent = data.dominant_emotion;
-            
-            // Apply emotion specific styling
             uploadEmotionText.className = '';
             uploadEmotionText.classList.add(`emotion-${data.dominant_emotion.toLowerCase()}`);
-            
-            // Show results section
             uploadDetectedEmotion.style.display = 'block';
             
-            // Store data for recommendations page
             sessionStorage.setItem('capturedImage', imagePreview.src);
             sessionStorage.setItem('detectedEmotion', data.dominant_emotion);
             sessionStorage.setItem('recommendations', JSON.stringify(data.recommendations));
             
-            // Update recommendations button link
             uploadGetRecommendationsBtn.href = `/recommendations?emotion=${encodeURIComponent(data.dominant_emotion)}`;
             
         } catch (error) {
             console.error('Error processing image:', error);
-            
-            // Show error message
             uploadEmotionPlaceholder.innerHTML = `
                 <i class="fas fa-exclamation-circle" style="color: var(--danger-color);"></i>
                 <p>${error.message || 'Error processing image'}</p>
             `;
             uploadEmotionPlaceholder.style.display = 'block';
         } finally {
-            // Reset button state
             detectEmotionBtn.disabled = false;
             detectEmotionBtn.innerHTML = '<i class="fas fa-search"></i> Detect Emotion';
         }
@@ -376,12 +329,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedEmotionSongs = document.getElementById('selectedEmotionSongs');
     const selectedEmotionText = document.getElementById('selectedEmotionText');
     const songsList = document.getElementById('songsList');
+    const moreEmotionsGrid = document.querySelector('.more-emotions-grid');
 
     if (emotionItems.length > 0) {
         emotionItems.forEach(item => {
             item.addEventListener('click', async function() {
-                // Get the selected emotion
                 const emotion = this.getAttribute('data-emotion');
+                
+                // Handle "Select More" option
+                if (emotion === 'More') {
+                    moreEmotionsGrid.style.display = moreEmotionsGrid.style.display === 'none' ? 'grid' : 'none';
+                    return;
+                }
                 
                 // Highlight the selected emotion
                 emotionItems.forEach(el => el.classList.remove('selected'));
@@ -453,21 +412,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Check if there's an emotion parameter in the URL (from other sections)
+    // Check if there's an emotion parameter in the URL
     function checkUrlForEmotion() {
         const urlParams = new URLSearchParams(window.location.search);
         const emotion = urlParams.get('emotion');
         
         if (emotion) {
-            // Find the emotion item and trigger a click
             const emotionItem = document.querySelector(`.emotion-item[data-emotion="${emotion}"]`);
             if (emotionItem) {
                 emotionItem.click();
+            } else if (['Pregnant', 'Depression', 'Trouble Sleeping'].includes(emotion)) {
+                // Show more emotions grid and select the special emotion
+                moreEmotionsGrid.style.display = 'grid';
+                const specialEmotionItem = document.querySelector(`.emotion-item[data-emotion="${emotion}"]`);
+                if (specialEmotionItem) {
+                    specialEmotionItem.click();
+                }
             }
         }
     }
     
-    // Run on page load
     checkUrlForEmotion();
 
     // Add responsive navigation for mobile
@@ -509,12 +473,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     window.addEventListener('scroll', checkSections);
-    checkSections(); // Run once on page load
+    checkSections();
     
-    // Function to get embedded player
     function getEmbeddedPlayer(url) {
         if (url.includes("youtube.com") || url.includes("youtu.be")) {
-            // Extract YouTube video ID
             let videoId;
             if (url.includes("youtube.com")) {
                 if (url.includes("watch?v=")) {
@@ -528,7 +490,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             return `<iframe width="100%" height="215" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
         } else if (url.includes("spotify.com")) {
-            // Extract Spotify track ID
             if (url.includes("track/")) {
                 const trackId = url.split("track/")[1];
                 return `<iframe src="https://open.spotify.com/embed/track/${trackId}" width="100%" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>`;

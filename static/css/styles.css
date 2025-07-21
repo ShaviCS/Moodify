@@ -1018,6 +1018,14 @@ a:hover {
     }
 }
 
+.more-emotions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+    justify-items: center;
+}
+
 /* Responsive Design */
 @media (max-width: 968px) {
     .music-therapy-content {

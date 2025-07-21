@@ -238,48 +238,60 @@
     </section>
 
     <!-- Select Emotion Section -->
-    <section id="select-section" class="section select-section">
-        <div class="section-container">
-            <h2 class="section-title">Select Your Emotion</h2>
-            <p class="section-description">Choose how you're feeling right now to get personalized music recommendations</p>
-            
-            <div class="emotion-grid">
-                <div class="emotion-item" data-emotion="Happy">
-                    <div class="emotion-icon">😊</div>
-                    <p>Happy</p>
-                </div>
-                <div class="emotion-item" data-emotion="Sad">
-                    <div class="emotion-icon">😢</div>
-                    <p>Sad</p>
-                </div>
-                <div class="emotion-item" data-emotion="Angry">
-                    <div class="emotion-icon">😠</div>
-                    <p>Angry</p>
-                </div>
-                <div class="emotion-item" data-emotion="Surprise">
-                    <div class="emotion-icon">😲</div>
-                    <p>Surprise</p>
-                </div>
-                <div class="emotion-item" data-emotion="Fear">
-                    <div class="emotion-icon">😨</div>
-                    <p>Fear</p>
-                </div>
-                <div class="emotion-item" data-emotion="Disgust">
-                    <div class="emotion-icon">🤢</div>
-                    <p>Disgust</p>
-                </div>
-                <div class="emotion-item" data-emotion="Neutral">
-                    <div class="emotion-icon">😐</div>
-                    <p>Neutral</p>
-                </div>
+    <section id="select-emotion" class="section">
+        <h2>Select Your Emotion</h2>
+        <p>Choose how you're feeling right now to get personalized music recommendations</p>
+        <div class="emotion-grid">
+            <div class="emotion-item" data-emotion="Happy">
+                <span class="emotion-icon">😊</span>
+                <p>Happy</p>
             </div>
-            
-            <div id="selectedEmotionSongs" class="songs-container" style="display: none;">
-                <h3>Music for your <span id="selectedEmotionText"></span> mood</h3>
-                <div id="songsList" class="songs-grid">
-                    <!-- Songs will be populated here via JavaScript -->
-                </div>
+            <div class="emotion-item" data-emotion="Sad">
+                <span class="emotion-icon">😢</span>
+                <p>Sad</p>
             </div>
+            <div class="emotion-item" data-emotion="Angry">
+                <span class="emotion-icon">😠</span>
+                <p>Angry</p>
+            </div>
+            <div class="emotion-item" data-emotion="Surprise">
+                <span class="emotion-icon">😲</span>
+                <p>Surprise</p>
+            </div>
+            <div class="emotion-item" data-emotion="Fear">
+                <span class="emotion-icon">😨</span>
+                <p>Fear</p>
+            </div>
+            <div class="emotion-item" data-emotion="Disgust">
+                <span class="emotion-icon">🤢</span>
+                <p>Disgust</p>
+            </div>
+            <div class="emotion-item" data-emotion="Neutral">
+                <span class="emotion-icon">😐</span>
+                <p>Neutral</p>
+            </div>
+            <div class="emotion-item more-emotions" data-emotion="More">
+                <span class="emotion-icon">➕</span>
+                <p>Select More</p>
+            </div>
+        </div>
+        <div class="more-emotions-grid" style="display: none;">
+            <div class="emotion-item" data-emotion="Pregnant">
+                <span class="emotion-icon">🤰</span>
+                <p>Pregnant</p>
+            </div>
+            <div class="emotion-item" data-emotion="Depression">
+                <span class="emotion-icon">😔</span>
+                <p>Depression</p>
+            </div>
+            <div class="emotion-item" data-emotion="Trouble Sleeping">
+                <span class="emotion-icon">😴</span>
+                <p>Trouble Sleeping</p>
+            </div>
+        </div>
+        <div id="selectedEmotionSongs" style="display: none;">
+            <h3>Music for your <span id="selectedEmotionText"></span> mood</h3>
+            <div id="songsList" class="songs-grid"></div>
         </div>
     </section>
 
