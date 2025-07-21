@@ -101,6 +101,7 @@ def init_db():
         artist TEXT NOT NULL,
         url TEXT NOT NULL,
         emotion TEXT NOT NULL,
+        language TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
@@ -327,7 +328,8 @@ def get_songs_for_emotion(emotion):
     return [{
         'title': song['title'],
         'artist': song['artist'],
-        'url': song['url']
+        'url': song['url'],
+        'language': song['language']
     } for song in songs]
 
 # Helper function to convert YouTube URLs to embedded format
@@ -548,8 +550,9 @@ def admin_add_song():
     artist = data.get('artist')
     url = data.get('url')
     emotion = data.get('emotion')
+    language = data.get('language')
     
-    if not all([title, artist, url, emotion]):
+    if not all([title, artist, url, emotion, language]):
         return jsonify({"success": False, "error": "All fields are required"}), 400
     
     conn = get_db_connection()
@@ -558,9 +561,9 @@ def admin_add_song():
     try:
         song_id = str(uuid.uuid4())
         cursor.execute('''
-            INSERT INTO songs (id, title, artist, url, emotion)
-            VALUES (%s, %s, %s, %s, %s)
-        ''', (song_id, title, artist, url, emotion))
+            INSERT INTO songs (id, title, artist, url, emotion, language)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (song_id, title, artist, url, emotion, language))
         
         conn.commit()
         return jsonify({"success": True, "song_id": song_id})

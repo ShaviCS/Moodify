@@ -174,3 +174,7 @@
     border-radius: 4px;
     box-sizing: border-box;
 }
+
+.form-group select.language-select {
+    margin-top: 10px;
+}

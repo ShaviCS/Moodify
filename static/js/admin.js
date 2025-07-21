@@ -9,7 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 title: document.getElementById('title').value,
                 artist: document.getElementById('artist').value,
                 url: document.getElementById('url').value,
-                emotion: document.getElementById('emotion').value
+                emotion: document.getElementById('emotion').value,
+                language: document.getElementById('language').value
             };
             
             fetch('/admin/add_song', {
@@ -48,7 +49,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Remove the song item from the DOM
                         const songItem = this.closest('.song-item');
                         songItem.remove();
                     } else {
