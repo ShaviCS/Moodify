@@ -1025,6 +1025,16 @@ a:hover {
     margin-top: 20px;
     justify-items: center;
 }
+.emotion-item {
+    cursor: pointer;
+    text-align: center;
+    padding: 15px;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+}
+.emotion-item:hover {
+    transform: translateY(-5px);
+}
 
 /* Responsive Design */
 @media (max-width: 968px) {
