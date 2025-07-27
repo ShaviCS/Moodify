@@ -35,9 +35,14 @@ body {
 }
 
 /* Common Elements */
-h1, h2, h3 {
+h1, h2 {
     color: var(--primary-color);
     margin-bottom: 1rem;
+}
+
+h3 {
+    color: var(--success-color);
+    margin-bottom: 0.75rem;
 }
 
 a {
@@ -379,6 +384,11 @@ a:hover {
     text-align: center;
     font-size: 2.5rem;
     margin-bottom: 1rem;
+}
+
+.section-option {
+    text-align: center;
+    font-size: 1.5rem;
 }
 
 .section-description {
@@ -868,6 +878,10 @@ a:hover {
     
     .section-title {
         font-size: 2rem;
+    }
+
+    .section-option {
+        font-size: 1rem;
     }
     
     .emotion-grid {
