@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         songCard.innerHTML = `
                             <div class="song-info">
-                                <h4 class="song-title">${song.title}</h4>
+                                <h3 class="song-title">${song.title}</h3>
                                 <p class="song-artist">${song.artist}</p>
                             </div>
                             <div class="song-player">
