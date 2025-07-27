@@ -330,6 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedEmotionText = document.getElementById('selectedEmotionText');
     const songsList = document.getElementById('songsList');
     const moreEmotionsGrid = document.querySelector('.more-emotions-grid');
+    const moreEmotionsTitle = document.getElementById('more-emotions-title');
 
     if (emotionItems.length > 0) {
         emotionItems.forEach(item => {
@@ -338,7 +339,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Handle "Select More" option
                 if (emotion === 'More') {
-                    moreEmotionsGrid.style.display = moreEmotionsGrid.style.display === 'none' ? 'grid' : 'none';
+                    const isGridVisible = moreEmotionsGrid.style.display === 'grid';
+                    moreEmotionsGrid.style.display = isGridVisible ? 'none' : 'grid';
+                    moreEmotionsTitle.style.display = isGridVisible ? 'none' : 'block';
                     return;
                 }
                 
@@ -421,9 +424,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const emotionItem = document.querySelector(`.emotion-item[data-emotion="${emotion}"]`);
             if (emotionItem) {
                 emotionItem.click();
-            } else if (['Pregnant', 'Depression', 'Trouble Sleeping'].includes(emotion)) {
-                // Show more emotions grid and select the special emotion
+            } else if (['Pregnant', 'Depression', 'Trouble Sleeping', 'Travelling', 'Stressed', 'Lonely', 'Excited'].includes(emotion)) {
+                // Show more emotions grid and title, then select the special emotion
                 moreEmotionsGrid.style.display = 'grid';
+                moreEmotionsTitle.style.display = 'block';
                 const specialEmotionItem = document.querySelector(`.emotion-item[data-emotion="${emotion}"]`);
                 if (specialEmotionItem) {
                     specialEmotionItem.click();
