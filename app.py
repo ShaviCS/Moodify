@@ -144,10 +144,27 @@ model = None
 def load_model():
     global model
     try:
-        model = tf.keras.models.load_model('emotion_detection_model.h5')
-        print("Model loaded successfully!")
+        # Check if model file exists
+        model_path = 'emotion_detection_model.h5'
+        if not os.path.exists(model_path):
+            print(f"Model file not found at {model_path}")
+            return False
+            
+        # Load the model with error handling
+        model = tf.keras.models.load_model(model_path)
+        print("Emotion detection model loaded successfully!")
+        
+        # Test the model with a dummy input
+        dummy_input = np.zeros((1, 48, 48, 1))
+        test_prediction = model.predict(dummy_input, verbose=0)
+        print(f"Model test successful - output shape: {test_prediction.shape}")
+        
+        return True
+        
     except Exception as e:
         print(f"Error loading model: {str(e)}")
+        model = None
+        return False
 
 # Helper function to send email
 def send_reset_email(user_email, reset_token):
@@ -315,22 +332,28 @@ def reset_password(token):
 
 # Function for get relevant songs from the database
 def get_songs_for_emotion(emotion):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT * FROM songs WHERE emotion = %s', (emotion,))
-    songs = cursor.fetchall()
-    
-    cursor.close()
-    conn.close()
-    
-    # Convert to the format expected by the frontend
-    return [{
-        'title': song['title'],
-        'artist': song['artist'],
-        'url': song['url'],
-        'language': song['language']
-    } for song in songs]
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM songs WHERE emotion = %s LIMIT 20', (emotion,))
+        songs = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        # Convert to the format expected by the frontend
+        return [{
+            'id': song['id'],
+            'title': song['title'],
+            'artist': song['artist'],
+            'url': song['url'],
+            'language': song['language']
+        } for song in songs]
+        
+    except Exception as e:
+        print(f"Error fetching songs for emotion {emotion}: {str(e)}")
+        return []
 
 # Helper function to convert YouTube URLs to embedded format
 def get_embedded_player(url):
@@ -365,62 +388,103 @@ def detect_emotion(image):
             if model is None:
                 raise Exception("Model failed to load")
 
-        # Convert image to OpenCV format
+        # Convert image to OpenCV format if needed
         if isinstance(image, str):  # Base64 string
-            image_data = base64.b64decode(image.split(',')[1])
-            image = Image.open(io.BytesIO(image_data))
+            try:
+                image_data = base64.b64decode(image.split(',')[1])
+                image = Image.open(io.BytesIO(image_data))
+            except Exception as e:
+                raise Exception(f"Failed to decode base64 image: {str(e)}")
             
         if isinstance(image, Image.Image):
-            opencv_img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            try:
+                opencv_img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            except Exception as e:
+                raise Exception(f"Failed to convert image format: {str(e)}")
         else:
             opencv_img = image
 
         display_img = opencv_img.copy()
-        gray = cv2.cvtColor(opencv_img, cv2.COLOR_BGR2GRAY)
+        
+        # Convert to grayscale for face detection
+        try:
+            gray = cv2.cvtColor(opencv_img, cv2.COLOR_BGR2GRAY)
+        except Exception as e:
+            raise Exception(f"Failed to convert image to grayscale: {str(e)}")
         
         # Load face cascade
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+        try:
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            if face_cascade.empty():
+                raise Exception("Failed to load face cascade classifier")
+        except Exception as e:
+            raise Exception(f"Face cascade loading error: {str(e)}")
+
+        # Detect faces
+        try:
+            faces = face_cascade.detectMultiScale(gray, 1.1, 4, minSize=(30, 30))
+        except Exception as e:
+            raise Exception(f"Face detection failed: {str(e)}")
 
         if len(faces) == 0:
             return display_img, [], "No faces detected"
 
         results = []
-        for (x, y, w, h) in faces:
-            face_roi = gray[y:y+h, x:x+w]
-            face_roi = cv2.resize(face_roi, (48, 48))
-            face_roi = face_roi.astype("float") / 255.0
-            face_roi = np.expand_dims(face_roi, axis=0)
-            face_roi = np.expand_dims(face_roi, axis=-1)
+        try:
+            for (x, y, w, h) in faces:
+                # Extract face region
+                face_roi = gray[y:y+h, x:x+w]
+                
+                # Resize to model input size
+                face_roi = cv2.resize(face_roi, (48, 48))
+                face_roi = face_roi.astype("float") / 255.0
+                face_roi = np.expand_dims(face_roi, axis=0)
+                face_roi = np.expand_dims(face_roi, axis=-1)
 
-            prediction = model.predict(face_roi)
-            emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
-            emotion = emotion_labels[np.argmax(prediction)]
-            probability = float(np.max(prediction))
+                # Predict emotion
+                prediction = model.predict(face_roi, verbose=0)
+                emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
+                emotion_idx = np.argmax(prediction)
+                emotion = emotion_labels[emotion_idx]
+                probability = float(np.max(prediction))
 
-            # Draw on image
-            emotion_colors = {
-                "Angry": (0, 0, 255),
-                "Disgust": (0, 128, 128),
-                "Fear": (128, 0, 128),
-                "Happy": (0, 255, 255),
-                "Neutral": (128, 128, 128),
-                "Sad": (255, 0, 0),
-                "Surprise": (0, 165, 255)
-            }
-            color = emotion_colors.get(emotion, (0, 255, 0))
-            cv2.rectangle(display_img, (x, y), (x+w, y+h), color, 2)
-            cv2.putText(display_img, f"{emotion}: {probability:.2f}", 
-                        (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, 
-                        color, 2)
+                # Validate prediction confidence
+                if probability < 0.3:  # Low confidence threshold
+                    print(f"Low confidence prediction: {emotion} ({probability:.2f})")
 
-            results.append({
-                'emotion': emotion,
-                'probability': probability,
-                'position': (x, y, w, h)
-            })
+                # Draw on image
+                emotion_colors = {
+                    "Angry": (0, 0, 255),
+                    "Disgust": (0, 128, 128),
+                    "Fear": (128, 0, 128),
+                    "Happy": (0, 255, 255),
+                    "Neutral": (128, 128, 128),
+                    "Sad": (255, 0, 0),
+                    "Surprise": (0, 165, 255)
+                }
+                color = emotion_colors.get(emotion, (0, 255, 0))
+                
+                # Draw rectangle and text
+                cv2.rectangle(display_img, (x, y), (x+w, y+h), color, 2)
+                cv2.putText(display_img, f"{emotion}: {probability:.2f}", 
+                            (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, 
+                            color, 2)
 
-        dominant_emotion = max(results, key=lambda x: x['probability'])['emotion'] if results else None
+                results.append({
+                    'emotion': emotion,
+                    'probability': probability,
+                    'position': (x, y, w, h)
+                })
+
+        except Exception as e:
+            raise Exception(f"Emotion prediction failed: {str(e)}")
+
+        # Get dominant emotion
+        if results:
+            dominant_emotion = max(results, key=lambda x: x['probability'])['emotion']
+        else:
+            dominant_emotion = "No emotion detected"
+            
         return display_img, results, dominant_emotion
 
     except Exception as e:
@@ -483,18 +547,24 @@ def process_frame(frame_data):
         "recommendations": emotion_songs.get(dominant_emotion, [])
     }
 
-# Save user emotion and recommendation history
+# Enhanced history saving with error handling
 def save_user_history(user_id, emotion, song_id=None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    history_id = str(uuid.uuid4())
-    
-    cursor.execute('INSERT INTO user_history (id, user_id, emotion, song_id) VALUES (%s, %s, %s, %s)',
-                 (history_id, user_id, emotion, song_id))
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        history_id = str(uuid.uuid4())
+        
+        cursor.execute('INSERT INTO user_history (id, user_id, emotion, song_id) VALUES (%s, %s, %s, %s)',
+                     (history_id, user_id, emotion, song_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"Error saving user history: {str(e)}")
+        return False
 
 # Authentication Routes
 @app.route('/')
@@ -741,6 +811,10 @@ def video_feed():
 @login_required
 def process_emotion():
     try:
+        # Check if request has JSON data
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+            
         data = request.json
         if not data or 'image' not in data:
             return jsonify({"error": "No image data provided"}), 400
@@ -748,42 +822,108 @@ def process_emotion():
         # Get the base64 image data
         image_data = data['image']
         
+        # Validate image data format
+        if not image_data or not isinstance(image_data, str):
+            return jsonify({"error": "Invalid image data format"}), 400
+        
         # Remove the data URL prefix if present
         if image_data.startswith('data:image'):
-            image_data = image_data.split(',')[1]
+            try:
+                image_data = image_data.split(',')[1]
+            except IndexError:
+                return jsonify({"error": "Invalid image data format"}), 400
+        
+        # Validate base64 data
+        if not image_data:
+            return jsonify({"error": "Empty image data"}), 400
 
         try:
-            # Decode the base64 image
-            image_bytes = base64.b64decode(image_data)
-            image = Image.open(io.BytesIO(image_bytes))
+            # Decode the base64 image with size limit check
+            try:
+                image_bytes = base64.b64decode(image_data)
+            except Exception as e:
+                return jsonify({"error": "Invalid base64 image data"}), 400
+            
+            # Check decoded image size (limit to 10MB)
+            if len(image_bytes) > 10 * 1024 * 1024:
+                return jsonify({"error": "Image file too large. Please use an image smaller than 10MB."}), 413
+            
+            # Open and validate image
+            try:
+                image = Image.open(io.BytesIO(image_bytes))
+                # Verify it's a valid image
+                image.verify()
+                # Reopen the image since verify() closes it
+                image = Image.open(io.BytesIO(image_bytes))
+            except Exception as e:
+                return jsonify({"error": "Invalid or corrupted image file"}), 400
+            
+            # Convert to RGB if necessary
+            if image.mode != 'RGB':
+                try:
+                    image = image.convert('RGB')
+                except Exception as e:
+                    return jsonify({"error": "Unable to process image format"}), 400
+            
+            # Check if model is loaded
+            if model is None:
+                try:
+                    load_model()
+                    if model is None:
+                        return jsonify({"error": "Emotion detection model is not available. Please try again later."}), 503
+                except Exception as e:
+                    print(f"Model loading error: {str(e)}")
+                    return jsonify({"error": "Failed to load emotion detection model"}), 503
             
             # Convert to OpenCV format
-            opencv_img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            try:
+                opencv_img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            except Exception as e:
+                return jsonify({"error": "Failed to process image"}), 500
             
-            # Process the image
-            display_img, predictions, dominant_emotion = detect_emotion(opencv_img)
+            # Process the image for emotion detection
+            try:
+                display_img, predictions, dominant_emotion = detect_emotion(opencv_img)
+            except Exception as e:
+                print(f"Emotion detection error: {str(e)}")
+                return jsonify({"error": "Failed to analyze emotions in the image"}), 500
             
-            if not dominant_emotion:
-                return jsonify({"error": "No faces detected or emotion recognized"}), 400
+            # Check if face was detected
+            if not dominant_emotion or dominant_emotion == "No faces detected":
+                return jsonify({"error": "No faces detected in the image. Please upload a clear photo showing your face."}), 400
+            
+            # Check for other error conditions
+            if isinstance(dominant_emotion, str) and "error" in dominant_emotion.lower():
+                return jsonify({"error": dominant_emotion}), 500
 
-            # Save to history
-            save_user_history(session['user_id'], dominant_emotion)
+            # Save to history (with error handling)
+            try:
+                if 'user_id' in session:
+                    save_user_history(session['user_id'], dominant_emotion)
+            except Exception as e:
+                # Log the error but don't fail the request
+                print(f"Error saving to history: {str(e)}")
             
             # Get recommendations
-            recommendations = get_songs_for_emotion(dominant_emotion)
-            
+            try:
+                recommendations = get_songs_for_emotion(dominant_emotion)
+            except Exception as e:
+                print(f"Error getting recommendations: {str(e)}")
+                recommendations = []
+                
             return jsonify({
                 "dominant_emotion": dominant_emotion,
-                "recommendations": recommendations
+                "recommendations": recommendations,
+                "confidence": predictions[0]['probability'] if predictions else None
             })
             
         except Exception as e:
             print(f"Error processing image: {str(e)}")
-            return jsonify({"error": "Failed to process image"}), 500
+            return jsonify({"error": "Failed to process the uploaded image. Please try with a different image."}), 500
 
     except Exception as e:
-        print(f"Error in process_emotion: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
+        print(f"Unexpected error in process_emotion: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred. Please try again."}), 500
 
 # Add this new route for getting songs by emotion
 @app.route('/get_songs/<emotion>')
