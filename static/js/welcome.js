@@ -195,56 +195,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadEmotionText = document.getElementById('uploadEmotionText');
     const uploadGetRecommendationsBtn = document.getElementById('uploadGetRecommendations');
 
-    // Store data in memory instead of sessionStorage
-    let uploadData = {
-        capturedImage: null,
-        detectedEmotion: null,
-        recommendations: null
-    };
-
     imageUpload.addEventListener('change', function() {
         if (this.files && this.files[0]) {
             const file = this.files[0];
             
-            // Enhanced file validation
             if (!file.type.match('image.*')) {
-                showError('Please select a valid image file (JPEG, PNG, GIF, etc.)');
-                return;
-            }
-            
-            // Check file size (limit to 10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                showError('Image file is too large. Please select an image smaller than 10MB.');
+                alert('Please select an image file (JPEG, PNG, etc.)');
                 return;
             }
             
             const reader = new FileReader();
             
             reader.onload = function(e) {
-                try {
-                    imagePreview.src = e.target.result;
-                    uploadArea.style.display = 'none';
-                    previewContainer.style.display = 'block';
-                    detectEmotionBtn.style.display = 'inline-flex';
-                    uploadEmotionPlaceholder.style.display = 'block';
-                    uploadDetectedEmotion.style.display = 'none';
-                    
-                    // Reset any previous error states
-                    resetErrorState();
-                } catch (error) {
-                    showError('Error loading image preview. Please try another image.');
-                }
+                imagePreview.src = e.target.result;
+                uploadArea.style.display = 'none';
+                previewContainer.style.display = 'block';
+                detectEmotionBtn.style.display = 'inline-flex';
+                uploadEmotionPlaceholder.style.display = 'block';
+                uploadDetectedEmotion.style.display = 'none';
             };
             
             reader.onerror = function() {
-                showError('Error reading file. Please try another image.');
+                alert('Error reading file. Please try another image.');
             };
             
             reader.readAsDataURL(file);
         }
     });
 
-    // Drag and drop functionality
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         uploadArea.addEventListener(eventName, preventDefaults, false);
     });
@@ -275,13 +253,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const files = dt.files;
         
         if (files.length > 0) {
-            // Validate dropped file
-            const file = files[0];
-            if (!file.type.match('image.*')) {
-                showError('Please drop a valid image file (JPEG, PNG, GIF, etc.)');
-                return;
-            }
-            
             imageUpload.files = files;
             const event = new Event('change');
             imageUpload.dispatchEvent(event);
@@ -290,166 +261,67 @@ document.addEventListener('DOMContentLoaded', function() {
 
     detectEmotionBtn.addEventListener('click', async function() {
         if (!imagePreview.src || imagePreview.src === '#') {
-            showError('Please upload an image first');
+            alert('Please upload an image first');
             return;
         }
 
         try {
-            // Update button state
             detectEmotionBtn.disabled = true;
             detectEmotionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
             uploadEmotionPlaceholder.style.display = 'none';
             uploadDetectedEmotion.style.display = 'none';
-            
-            // Prepare the request payload
-            const requestPayload = {
-                image: imagePreview.src
-            };
-            
-            console.log('Sending emotion detection request...');
             
             const response = await fetch('/process_emotion', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(requestPayload),
+                body: JSON.stringify({ image: imagePreview.src }),
             });
 
-            console.log('Response status:', response.status);
-
             if (!response.ok) {
-                let errorMessage = `Server error (${response.status})`;
-                
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch (e) {
-                    // If we can't parse JSON, use the status-based message
-                    switch (response.status) {
-                        case 400:
-                            errorMessage = 'Invalid image data. Please try a different image.';
-                            break;
-                        case 413:
-                            errorMessage = 'Image file is too large. Please use a smaller image.';
-                            break;
-                        case 500:
-                            errorMessage = 'Server processing error. Please try again.';
-                            break;
-                        case 502:
-                            errorMessage = 'Server temporarily unavailable. Please try again in a moment.';
-                            break;
-                        case 503:
-                            errorMessage = 'Service temporarily unavailable. Please try again later.';
-                            break;
-                        default:
-                            errorMessage = 'Network error. Please check your connection and try again.';
-                    }
-                }
-                
-                throw new Error(errorMessage);
+                throw new Error(`Server error: ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('Response data:', data);
 
             if (data.error) {
                 throw new Error(data.error);
             }
             
-            if (!data.dominant_emotion) {
-                throw new Error('No emotion detected. Please try with a clearer image showing your face.');
-            }
-            
-            // Store data in memory
-            uploadData.capturedImage = imagePreview.src;
-            uploadData.detectedEmotion = data.dominant_emotion;
-            uploadData.recommendations = data.recommendations || [];
-            
-            // Update UI with results
             uploadEmotionText.textContent = data.dominant_emotion;
             uploadEmotionText.className = '';
             uploadEmotionText.classList.add(`emotion-${data.dominant_emotion.toLowerCase()}`);
             uploadDetectedEmotion.style.display = 'block';
             
-            // Update recommendations button
-            uploadGetRecommendationsBtn.href = `/recommendations?emotion=${encodeURIComponent(data.dominant_emotion)}`;
+            sessionStorage.setItem('capturedImage', imagePreview.src);
+            sessionStorage.setItem('detectedEmotion', data.dominant_emotion);
+            sessionStorage.setItem('recommendations', JSON.stringify(data.recommendations));
             
-            console.log('Emotion detection successful:', data.dominant_emotion);
+            uploadGetRecommendationsBtn.href = `/recommendations?emotion=${encodeURIComponent(data.dominant_emotion)}`;
             
         } catch (error) {
             console.error('Error processing image:', error);
-            showError(error.message || 'Error processing image. Please try again.');
+            uploadEmotionPlaceholder.innerHTML = `
+                <i class="fas fa-exclamation-circle" style="color: var(--danger-color);"></i>
+                <p>${error.message || 'Error processing image'}</p>
+            `;
+            uploadEmotionPlaceholder.style.display = 'block';
         } finally {
-            // Reset button state
             detectEmotionBtn.disabled = false;
             detectEmotionBtn.innerHTML = '<i class="fas fa-search"></i> Detect Emotion';
         }
     });
 
-    // Helper function to show errors
-    function showError(message) {
-        uploadEmotionPlaceholder.innerHTML = `
-            <i class="fas fa-exclamation-circle" style="color: #ff4757; font-size: 2rem; margin-bottom: 1rem;"></i>
-            <p style="color: #ff4757; font-weight: 500;">${message}</p>
-            <button onclick="resetUpload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #ff4757; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                Try Again
-            </button>
-        `;
-        uploadEmotionPlaceholder.style.display = 'block';
-        uploadDetectedEmotion.style.display = 'none';
-    }
-
-    // Helper function to reset error state
-    function resetErrorState() {
-        uploadEmotionPlaceholder.innerHTML = `
-            <i class="fas fa-dizzy"></i>
-            <p>Your detected emotion will appear here</p>
-        `;
-    }
-
-    // Function to reset the entire upload process
-    function resetUpload() {
-        // Reset UI elements
-        uploadArea.style.display = 'block';
-        previewContainer.style.display = 'none';
-        detectEmotionBtn.style.display = 'none';
-        uploadDetectedEmotion.style.display = 'none';
-        
-        // Reset form
-        imageUpload.value = '';
-        imagePreview.src = '#';
-        
-        // Reset stored data
-        uploadData = {
-            capturedImage: null,
-            detectedEmotion: null,
-            recommendations: null
-        };
-        
-        // Reset error state
-        resetErrorState();
-        uploadEmotionPlaceholder.style.display = 'block';
-    }
-
-    // Function to get emotion songs (for backward compatibility)
     async function getEmotionSongs(emotion) {
         try {
             const response = await fetch(`/get_songs/${emotion}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
             const data = await response.json();
             return data;
         } catch (error) {
             console.error('Error fetching songs:', error);
             return [];
         }
-    }
-
-    // Function to get stored upload data (replaces sessionStorage)
-    function getUploadData() {
-        return uploadData;
     }
 
     // Select emotion functionality
