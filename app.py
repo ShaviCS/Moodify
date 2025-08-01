@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response, redirect, url_for, jsonify, request, session, flash
+from flask import Flask, render_template, Response, redirect, url_for, jsonify, request, session, flash, send_file
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -19,6 +19,8 @@ from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import json
+import re
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))  # Secret key for sessions
@@ -77,6 +79,7 @@ def init_db():
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         is_admin BOOLEAN DEFAULT FALSE,
+        avatar_data TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
@@ -203,6 +206,240 @@ def send_reset_email(user_email, reset_token):
     except Exception as e:
         print(f"Error sending email: {str(e)}")
         return False
+
+# Helper functions for user management
+def get_user_by_id(user_id):
+    """Get user data by ID from database"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT id, name, username, email, avatar_data, created_at, is_admin
+        FROM users WHERE id = %s
+    ''', (user_id,))
+    
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    if user:
+        return dict(user)
+    return None
+
+def get_user_by_email(email):
+    """Get user data by email from database"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT id, name, username, email, password, avatar_data, created_at, is_admin
+        FROM users WHERE email = %s
+    ''', (email,))
+    
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    if user:
+        return dict(user)
+    return None
+
+def update_user_profile(user_id, name, email):
+    """Update user profile in database"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE users SET name = %s, email = %s WHERE id = %s
+        ''', (name, email, user_id))
+        
+        conn.commit()
+        success = cursor.rowcount > 0
+        cursor.close()
+        conn.close()
+        
+        return success
+    except Exception as e:
+        print(f"Error updating profile: {e}")
+        return False
+
+def update_user_password(user_id, hashed_password):
+    """Update user password in database"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE users SET password = %s WHERE id = %s
+        ''', (hashed_password, user_id))
+        
+        conn.commit()
+        success = cursor.rowcount > 0
+        cursor.close()
+        conn.close()
+        
+        return success
+    except Exception as e:
+        print(f"Error updating password: {e}")
+        return False
+
+def update_user_avatar(user_id, image_data):
+    """Update user avatar in database"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE users SET avatar_data = %s WHERE id = %s
+        ''', (image_data, user_id))
+        
+        conn.commit()
+        success = cursor.rowcount > 0
+        cursor.close()
+        conn.close()
+        
+        return success
+    except Exception as e:
+        print(f"Error updating avatar: {e}")
+        return False
+
+def get_user_statistics(user_id):
+    """Get user statistics from database"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get emotion detections count
+    cursor.execute('''
+        SELECT COUNT(*) FROM user_history WHERE user_id = %s
+    ''', (user_id,))
+    emotion_detections = cursor.fetchone()[0]
+    
+    # Get songs played count (where song_id is not null)
+    cursor.execute('''
+        SELECT COUNT(*) FROM user_history WHERE user_id = %s AND song_id IS NOT NULL
+    ''', (user_id,))
+    songs_played = cursor.fetchone()[0]
+    
+    # Get unique emotions detected
+    cursor.execute('''
+        SELECT COUNT(DISTINCT emotion) FROM user_history WHERE user_id = %s
+    ''', (user_id,))
+    unique_emotions = cursor.fetchone()[0]
+    
+    cursor.close()
+    conn.close()
+    
+    return {
+        'emotion_detections_count': emotion_detections,
+        'songs_played_count': songs_played,
+        'unique_emotions_count': unique_emotions
+    }
+
+def get_user_activity_data(user_id, page, limit):
+    """Get user activity data with pagination"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    offset = (page - 1) * limit
+    
+    cursor.execute('''
+        SELECT uh.emotion, s.title, s.artist, uh.timestamp, uh.song_id
+        FROM user_history uh
+        LEFT JOIN songs s ON uh.song_id = s.id
+        WHERE uh.user_id = %s
+        ORDER BY uh.timestamp DESC
+        LIMIT %s OFFSET %s
+    ''', (user_id, limit, offset))
+    
+    activities = []
+    for row in cursor.fetchall():
+        if row[4]:  # If song_id exists
+            title = f"Listened to {row[2]} by {row[3]}"
+            description = f"Emotion detected: {row[0]}"
+        else:
+            title = f"{row[0]} emotion detected"
+            description = "Emotion detection session"
+        
+        activities.append({
+            'emotion': row[0],
+            'title': title,
+            'description': description,
+            'timestamp': row[3].isoformat() if row[3] else None
+        })
+    
+    cursor.close()
+    conn.close()
+    
+    return activities
+
+def get_complete_user_data(user_id):
+    """Get complete user data for download"""
+    user_data = get_user_by_id(user_id)
+    activities = get_user_activity_data(user_id, 1, 1000)  # Get all activities
+    stats = get_user_statistics(user_id)
+    languages = get_user_language_preferences(user_id)
+    
+    return {
+        'user_info': user_data,
+        'statistics': stats,
+        'language_preferences': languages,
+        'activity_history': activities,
+        'export_date': datetime.now().isoformat()
+    }
+
+def clear_user_activity_history(user_id):
+    """Clear user activity history from database"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            DELETE FROM user_history WHERE user_id = %s
+        ''', (user_id,))
+        
+        conn.commit()
+        success = cursor.rowcount >= 0  # >= 0 because even 0 deletions is successful
+        cursor.close()
+        conn.close()
+        
+        return success
+    except Exception as e:
+        print(f"Error clearing activity history: {e}")
+        return False
+
+def delete_user_account(user_id):
+    """Delete user account and all associated data"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Delete user history
+        cursor.execute('DELETE FROM user_history WHERE user_id = %s', (user_id,))
+        
+        # Delete user language preferences
+        cursor.execute('DELETE FROM user_language_preferences WHERE user_id = %s', (user_id,))
+        
+        # Delete password reset tokens
+        cursor.execute('DELETE FROM password_reset_tokens WHERE user_id = %s', (user_id,))
+        
+        # Delete user
+        cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
+        
+        conn.commit()
+        success = cursor.rowcount > 0
+        cursor.close()
+        conn.close()
+        
+        return success
+    except Exception as e:
+        print(f"Error deleting account: {e}")
+        return False
+
+def is_valid_email(email):
+    """Validate email format"""
+    pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+    return re.match(pattern, email) is not None
 
 # Route for forgot password page
 @app.route('/forgot_password', methods=['GET', 'POST'])
@@ -706,6 +943,7 @@ def login():
             session['username'] = user['username']
             session['name'] = user['name']
             session['is_admin'] = user['is_admin']
+            session['email'] = user['email']
             
             # Redirect based on admin status
             if user['is_admin']:
@@ -769,6 +1007,7 @@ def signup():
             session['user_id'] = user_id
             session['username'] = username
             session['name'] = name
+            session['email'] = email
             session['is_admin'] = False
             
             cursor.close()
@@ -791,15 +1030,257 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+# Profile page route
 @app.route('/profile')
+@login_required
 def profile():
-    # Temporary placeholder
-    return "Profile page - under construction"
+    # Get user data from database
+    user_data = get_user_by_id(session['user_id'])
+    
+    # Get user statistics
+    stats = get_user_statistics(session['user_id'])
+    user_data.update(stats)
+    
+    # Get language preferences
+    languages = get_user_language_preferences(session['user_id'])
+    user_data['language_preferences'] = languages
+    
+    return render_template('profile.html', user=user_data)
 
+# Settings page route
 @app.route('/settings')
+@login_required
 def settings():
-    # Temporary placeholder
-    return "Settings page - under construction"
+    user_data = get_user_by_id(session['user_id'])
+    languages = get_user_language_preferences(session['user_id'])
+    user_data['language_preferences'] = languages
+    return render_template('settings.html', user=user_data)
+
+# Update profile route
+@app.route('/update_profile', methods=['POST'])
+@login_required
+def update_profile():
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip()
+        
+        if not name or not email:
+            return jsonify({'success': False, 'error': 'Name and email are required'})
+        
+        # Validate email format
+        if not is_valid_email(email):
+            return jsonify({'success': False, 'error': 'Invalid email format'})
+        
+        # Check if email is already taken by another user
+        existing_user = get_user_by_email(email)
+        if existing_user and existing_user['id'] != session['user_id']:
+            return jsonify({'success': False, 'error': 'Email already in use'})
+        
+        # Update user in database
+        success = update_user_profile(session['user_id'], name, email)
+        
+        if success:
+            # Update session
+            session['name'] = name
+            session['email'] = email
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update profile'})
+            
+    except Exception as e:
+        print(f"Error updating profile: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred'})
+
+# Update password route
+@app.route('/update_password', methods=['POST'])
+@login_required
+def update_password():
+    try:
+        data = request.get_json()
+        current_password = data.get('current_password', '')
+        new_password = data.get('new_password', '')
+        
+        if not current_password or not new_password:
+            return jsonify({'success': False, 'error': 'Both passwords are required'})
+        
+        # Get user data
+        user_data = get_user_by_id(session['user_id'])
+        
+        # Get password from database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT password FROM users WHERE id = %s', (session['user_id'],))
+        user_password = cursor.fetchone()['password']
+        cursor.close()
+        conn.close()
+        
+        # Verify current password
+        if not check_password_hash(user_password, current_password):
+            return jsonify({'success': False, 'error': 'Current password is incorrect'})
+        
+        # Validate new password strength
+        if len(new_password) < 8:
+            return jsonify({'success': False, 'error': 'Password must be at least 8 characters long'})
+        
+        # Hash new password
+        hashed_password = generate_password_hash(new_password)
+        
+        # Update password in database
+        success = update_user_password(session['user_id'], hashed_password)
+        
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update password'})
+            
+    except Exception as e:
+        print(f"Error updating password: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred'})
+
+# Update language preferences route
+@app.route('/update_language_preferences', methods=['POST'])
+@login_required
+def update_language_preferences():
+    try:
+        data = request.get_json()
+        languages = data.get('languages', [])
+        
+        if not languages:
+            return jsonify({'success': False, 'error': 'At least one language must be selected'})
+        
+        # Update in database
+        save_user_language_preferences(session['user_id'], languages)
+        
+        return jsonify({'success': True})
+            
+    except Exception as e:
+        print(f"Error updating language preferences: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred'})
+
+# Get language preferences route
+@app.route('/get_language_preferences')
+@login_required
+def get_language_preferences():
+    try:
+        languages = get_user_language_preferences(session['user_id'])
+        return jsonify({'success': True, 'languages': languages})
+        
+    except Exception as e:
+        print(f"Error getting language preferences: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred'})
+
+# Update profile picture route
+@app.route('/update_profile_picture', methods=['POST'])
+@login_required
+def update_profile_picture():
+    try:
+        data = request.get_json()
+        image_data = data.get('image', '')
+        
+        if not image_data:
+            return jsonify({'success': False, 'error': 'No image data provided'})
+        
+        # Extract base64 data
+        if 'data:image' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        # Save image data in database
+        success = update_user_avatar(session['user_id'], image_data)
+        
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update profile picture'})
+            
+    except Exception as e:
+        print(f"Error updating profile picture: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred'})
+
+# Get user activity route
+@app.route('/get_user_activity')
+@login_required
+def get_user_activity():
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 5))
+        
+        activities = get_user_activity_data(session['user_id'], page, limit)
+        has_more = len(activities) == limit
+        
+        return jsonify({
+            'success': True, 
+            'activities': activities,
+            'has_more': has_more
+        })
+        
+    except Exception as e:
+        print(f"Error getting user activity: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred'})
+
+# Download user data route
+@app.route('/download_user_data')
+@login_required
+def download_user_data():
+    try:
+        # Get all user data
+        user_data = get_complete_user_data(session['user_id'])
+        
+        # Create JSON file
+        json_data = json.dumps(user_data, indent=2, default=str)
+        
+        # Create file-like object
+        file_obj = io.StringIO(json_data)
+        file_obj.seek(0)
+        
+        # Convert to bytes
+        bytes_obj = io.BytesIO(file_obj.getvalue().encode('utf-8'))
+        bytes_obj.seek(0)
+        
+        return send_file(
+            bytes_obj,
+            as_attachment=True,
+            download_name='moodify_user_data.json',
+            mimetype='application/json'
+        )
+        
+    except Exception as e:
+        print(f"Error downloading user data: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred'})
+
+# Clear activity history route
+@app.route('/clear_activity_history', methods=['POST'])
+@login_required
+def clear_activity_history():
+    try:
+        success = clear_user_activity_history(session['user_id'])
+        
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to clear activity history'})
+            
+    except Exception as e:
+        print(f"Error clearing activity history: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred'})
+
+# Delete account route
+@app.route('/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    try:
+        success = delete_user_account(session['user_id'])
+        
+        if success:
+            # Clear session
+            session.clear()
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to delete account'})
+            
+    except Exception as e:
+        print(f"Error deleting account: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred'})
 
 # Application Routes
 @app.route('/welcome')
