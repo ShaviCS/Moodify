@@ -568,11 +568,6 @@ def index():
 @app.route('/language_selection')
 @login_required
 def language_selection():
-    # Check if user has already selected languages
-    user_languages = get_user_language_preferences(session['user_id'])
-    if user_languages:
-        return redirect(url_for('welcome'))
-    
     return render_template('language.html')
 
 # Save language preferences route
@@ -587,7 +582,7 @@ def save_language_preferences():
     
     try:
         save_user_language_preferences(session['user_id'], languages)
-        return jsonify({"success": True})
+        return jsonify({"success": True, "redirect_url": url_for('welcome')})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -716,11 +711,7 @@ def login():
             if user['is_admin']:
                 return redirect(url_for('admin_dashboard'))
             
-            # Check if user has selected language preferences
-            user_languages = get_user_language_preferences(user['id'])
-            if not user_languages:
-                return redirect(url_for('language_selection'))
-            
+            # Directly redirect to welcome page (no language check)
             return redirect(url_for('welcome'))
         
         flash('Invalid username or password')
@@ -783,7 +774,7 @@ def signup():
             cursor.close()
             conn.close()
             
-            # Redirect to language selection after successful signup
+            # Always redirect to language selection for new users
             return redirect(url_for('language_selection'))
             
         except Exception as e:
@@ -814,11 +805,6 @@ def settings():
 @app.route('/welcome')
 @login_required
 def welcome():
-    # Check if user has selected language preferences
-    user_languages = get_user_language_preferences(session['user_id'])
-    if not user_languages:
-        return redirect(url_for('language_selection'))
-    
     return render_template('welcome.html', username=session.get('name', 'User'))
 
 @app.route('/detect')

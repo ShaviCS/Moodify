@@ -20,6 +20,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const startButton = document.querySelector('.start-button');
     if (startButton) {
         startButton.classList.add('pulse-animation');
+        
+        // Start button smooth scroll
+        startButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetSection = document.querySelector('#detect-section');
+            if (targetSection) {
+                targetSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
     }
     
     // Add hover animations to feature cards
@@ -74,7 +86,17 @@ document.addEventListener('DOMContentLoaded', function() {
         startCameraBtn.addEventListener('click', async function() {
             try {
                 if (stream) {
+                    // Stop camera if already running
                     stream.getTracks().forEach(track => track.stop());
+                    videoElement.style.display = 'none';
+                    if (cameraPlaceholder) {
+                        cameraPlaceholder.style.display = 'block';
+                    }
+                    startCameraBtn.innerHTML = '<i class="fas fa-camera"></i> Start Camera';
+                    startCameraBtn.disabled = false;
+                    captureImageBtn.disabled = true;
+                    stream = null;
+                    return;
                 }
 
                 stream = await navigator.mediaDevices.getUserMedia({ 
@@ -93,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     cameraPlaceholder.style.display = 'none';
                 }
                 
-                startCameraBtn.disabled = true;
+                startCameraBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Camera';
                 captureImageBtn.disabled = false;
                 
                 videoElement.addEventListener('error', (e) => {
@@ -133,6 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 captureImageBtn.disabled = true;
                 captureImageBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
+                // Show loading state
+                const emotionPlaceholder = document.querySelector('.emotion-placeholder');
+                if (emotionPlaceholder) {
+                    emotionPlaceholder.innerHTML = '<i class="fas fa-spinner fa-spin"></i><p>Analyzing your emotion...</p>';
+                }
+
                 const response = await fetch('/process_emotion', {
                     method: 'POST',
                     headers: {
@@ -152,6 +180,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 if (detectedEmotion) {
+                    if (emotionPlaceholder) {
+                        emotionPlaceholder.style.display = 'none';
+                    }
                     detectedEmotion.style.display = 'block';
                     emotionText.textContent = data.dominant_emotion;
                     emotionText.className = '';
@@ -160,6 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     sessionStorage.setItem('capturedImage', imageData);
                     sessionStorage.setItem('detectedEmotion', data.dominant_emotion);
                     
+                    // Get songs with language filtering
                     const songs = await getEmotionSongs(data.dominant_emotion);
                     sessionStorage.setItem('recommendations', JSON.stringify(songs));
                     
@@ -170,7 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch (error) {
                 console.error('Error processing image:', error);
-                alert('Error processing image: ' + error.message);
+                const emotionPlaceholder = document.querySelector('.emotion-placeholder');
+                if (emotionPlaceholder) {
+                    emotionPlaceholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i><p>Error processing image. Please try again.</p>';
+                } else {
+                    alert('Error processing image: ' + error.message);
+                }
             } finally {
                 captureImageBtn.disabled = false;
                 captureImageBtn.innerHTML = '<i class="fas fa-camera-retro"></i> Capture Image';
@@ -195,127 +232,146 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadEmotionText = document.getElementById('uploadEmotionText');
     const uploadGetRecommendationsBtn = document.getElementById('uploadGetRecommendations');
 
-    imageUpload.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            const file = this.files[0];
+    if (imageUpload) {
+        imageUpload.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file (JPEG, PNG, etc.)');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    uploadArea.style.display = 'none';
+                    previewContainer.style.display = 'block';
+                    detectEmotionBtn.style.display = 'inline-flex';
+                    uploadEmotionPlaceholder.style.display = 'block';
+                    uploadDetectedEmotion.style.display = 'none';
+                };
+                
+                reader.onerror = function() {
+                    alert('Error reading file. Please try another image.');
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Drag and drop functionality
+    if (uploadArea) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            uploadArea.classList.add('highlight');
+        }
+
+        function unhighlight() {
+            uploadArea.classList.remove('highlight');
+        }
+
+        uploadArea.addEventListener('drop', function(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
             
-            if (!file.type.match('image.*')) {
-                alert('Please select an image file (JPEG, PNG, etc.)');
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    imageUpload.files = files;
+                    const event = new Event('change');
+                    imageUpload.dispatchEvent(event);
+                }
+            }
+        });
+    }
+
+    if (detectEmotionBtn) {
+        detectEmotionBtn.addEventListener('click', async function() {
+            if (!imagePreview.src || imagePreview.src === '#') {
+                alert('Please upload an image first');
                 return;
             }
-            
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                imagePreview.src = e.target.result;
-                uploadArea.style.display = 'none';
-                previewContainer.style.display = 'block';
-                detectEmotionBtn.style.display = 'inline-flex';
+
+            try {
+                detectEmotionBtn.disabled = true;
+                detectEmotionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                uploadEmotionPlaceholder.innerHTML = '<i class="fas fa-spinner fa-spin"></i><p>Analyzing your emotion...</p>';
                 uploadEmotionPlaceholder.style.display = 'block';
                 uploadDetectedEmotion.style.display = 'none';
-            };
-            
-            reader.onerror = function() {
-                alert('Error reading file. Please try another image.');
-            };
-            
-            reader.readAsDataURL(file);
-        }
-    });
+                
+                const response = await fetch('/process_emotion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: imagePreview.src }),
+                });
 
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, preventDefaults, false);
-    });
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
 
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
+                const data = await response.json();
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, unhighlight, false);
-    });
-
-    function highlight() {
-        uploadArea.classList.add('highlight');
-    }
-
-    function unhighlight() {
-        uploadArea.classList.remove('highlight');
-    }
-
-    uploadArea.addEventListener('drop', function(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        
-        if (files.length > 0) {
-            imageUpload.files = files;
-            const event = new Event('change');
-            imageUpload.dispatchEvent(event);
-        }
-    });
-
-    detectEmotionBtn.addEventListener('click', async function() {
-        if (!imagePreview.src || imagePreview.src === '#') {
-            alert('Please upload an image first');
-            return;
-        }
-
-        try {
-            detectEmotionBtn.disabled = true;
-            detectEmotionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-            uploadEmotionPlaceholder.style.display = 'none';
-            uploadDetectedEmotion.style.display = 'none';
-            
-            const response = await fetch('/process_emotion', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ image: imagePreview.src }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                uploadEmotionPlaceholder.style.display = 'none';
+                uploadEmotionText.textContent = data.dominant_emotion;
+                uploadEmotionText.className = '';
+                uploadEmotionText.classList.add(`emotion-${data.dominant_emotion.toLowerCase()}`);
+                uploadDetectedEmotion.style.display = 'block';
+                
+                sessionStorage.setItem('capturedImage', imagePreview.src);
+                sessionStorage.setItem('detectedEmotion', data.dominant_emotion);
+                
+                // Get songs with language filtering
+                const songs = await getEmotionSongs(data.dominant_emotion);
+                sessionStorage.setItem('recommendations', JSON.stringify(songs));
+                
+                uploadGetRecommendationsBtn.href = `/recommendations?emotion=${encodeURIComponent(data.dominant_emotion)}`;
+                
+            } catch (error) {
+                console.error('Error processing image:', error);
+                uploadEmotionPlaceholder.innerHTML = `
+                    <i class="fas fa-exclamation-circle" style="color: var(--danger-color);"></i>
+                    <p>${error.message || 'Error processing image'}</p>
+                `;
+                uploadEmotionPlaceholder.style.display = 'block';
+            } finally {
+                detectEmotionBtn.disabled = false;
+                detectEmotionBtn.innerHTML = '<i class="fas fa-search"></i> Detect Emotion';
             }
+        });
+    }
 
-            const data = await response.json();
-
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            uploadEmotionText.textContent = data.dominant_emotion;
-            uploadEmotionText.className = '';
-            uploadEmotionText.classList.add(`emotion-${data.dominant_emotion.toLowerCase()}`);
-            uploadDetectedEmotion.style.display = 'block';
-            
-            sessionStorage.setItem('capturedImage', imagePreview.src);
-            sessionStorage.setItem('detectedEmotion', data.dominant_emotion);
-            sessionStorage.setItem('recommendations', JSON.stringify(data.recommendations));
-            
-            uploadGetRecommendationsBtn.href = `/recommendations?emotion=${encodeURIComponent(data.dominant_emotion)}`;
-            
-        } catch (error) {
-            console.error('Error processing image:', error);
-            uploadEmotionPlaceholder.innerHTML = `
-                <i class="fas fa-exclamation-circle" style="color: var(--danger-color);"></i>
-                <p>${error.message || 'Error processing image'}</p>
-            `;
-            uploadEmotionPlaceholder.style.display = 'block';
-        } finally {
-            detectEmotionBtn.disabled = false;
-            detectEmotionBtn.innerHTML = '<i class="fas fa-search"></i> Detect Emotion';
-        }
-    });
-
+    // Updated function to get emotion songs with language filtering
     async function getEmotionSongs(emotion) {
         try {
             const response = await fetch(`/get_songs/${emotion}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
             return data;
         } catch (error) {
@@ -324,7 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Select emotion functionality
+    // Select emotion functionality with language filtering
     const emotionItems = document.querySelectorAll('.emotion-item');
     const selectedEmotionSongs = document.getElementById('selectedEmotionSongs');
     const selectedEmotionText = document.getElementById('selectedEmotionText');
@@ -339,79 +395,109 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Handle "Select More" option
                 if (emotion === 'More') {
-                    const isGridVisible = moreEmotionsGrid.style.display === 'grid';
-                    moreEmotionsGrid.style.display = isGridVisible ? 'none' : 'grid';
-                    moreEmotionsTitle.style.display = isGridVisible ? 'none' : 'block';
+                    const isGridVisible = moreEmotionsGrid && moreEmotionsGrid.style.display === 'grid';
+                    if (moreEmotionsGrid) {
+                        moreEmotionsGrid.style.display = isGridVisible ? 'none' : 'grid';
+                    }
+                    if (moreEmotionsTitle) {
+                        moreEmotionsTitle.style.display = isGridVisible ? 'none' : 'block';
+                    }
                     return;
                 }
                 
-                // Highlight the selected emotion
-                emotionItems.forEach(el => el.classList.remove('selected'));
-                this.classList.add('selected');
+                // Remove active class from all items
+                emotionItems.forEach(el => el.classList.remove('selected', 'active'));
+                this.classList.add('selected', 'active');
                 
                 // Store the selected emotion data for recommendations page
                 sessionStorage.setItem('detectedEmotion', emotion);
                 
-                // Get songs for the selected emotion from database
-                const songs = await getEmotionSongs(emotion);
-                sessionStorage.setItem('recommendations', JSON.stringify(songs));
-                
-                // Show the songs section
+                // Show the songs section with loading state
                 if (selectedEmotionSongs) {
                     selectedEmotionSongs.style.display = 'block';
                     selectedEmotionText.textContent = emotion;
                     
-                    // Clear previous songs
-                    songsList.innerHTML = '';
+                    // Show loading state
+                    songsList.innerHTML = '<div class="loading-songs"><i class="fas fa-spinner fa-spin"></i><p>Loading songs...</p></div>';
                     
-                    // Add songs for the selected emotion
-                    songs.forEach(song => {
-                        const songCard = document.createElement('div');
-                        songCard.className = 'song-card';
+                    try {
+                        // Get songs for the selected emotion with language filtering
+                        const songs = await getEmotionSongs(emotion);
+                        sessionStorage.setItem('recommendations', JSON.stringify(songs));
                         
-                        songCard.innerHTML = `
-                            <div class="song-info">
-                                <h3 class="song-title">${song.title}</h3>
-                                <p class="song-artist">${song.artist}</p>
-                            </div>
-                            <div class="song-player">
-                                ${getEmbeddedPlayer(song.url)}
-                            </div>
-                        `;
+                        // Display songs with language filtering support
+                        displaySongs(songs, emotion);
                         
-                        // Save song selection to user history
-                        songCard.addEventListener('click', function() {
-                            fetch('/save_song_selection', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    emotion: emotion,
-                                    song_id: song.url
-                                }),
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    console.log('Song selection saved successfully');
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error saving song selection:', error);
-                            });
+                        // Scroll to the songs section
+                        selectedEmotionSongs.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
                         });
-                        
-                        songsList.appendChild(songCard);
-                    });
-                    
-                    // Scroll to the songs section
-                    selectedEmotionSongs.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                    } catch (error) {
+                        console.error('Error fetching songs:', error);
+                        songsList.innerHTML = '<div class="error-message">Error loading songs. Please try again.</div>';
+                    }
                 }
             });
+        });
+    }
+
+    // Updated function to display songs with language support
+    function displaySongs(songs, emotion) {
+        if (!songsList) return;
+        
+        if (songs.length === 0) {
+            songsList.innerHTML = `
+                <div class="no-songs-message">
+                    <i class="fas fa-music"></i>
+                    <p>No songs available for ${emotion} in your preferred languages.</p>
+                    <p>Try selecting different language preferences in your settings.</p>
+                </div>
+            `;
+            return;
+        }
+
+        songsList.innerHTML = '';
+        
+        songs.forEach(song => {
+            const songCard = document.createElement('div');
+            songCard.className = 'song-card';
+            
+            songCard.innerHTML = `
+                <div class="song-info">
+                    <h3 class="song-title">${song.title}</h3>
+                    <p class="song-artist">${song.artist}</p>
+                    ${song.language ? `<span class="song-language">${song.language}</span>` : ''}
+                </div>
+                <div class="song-player">
+                    ${getEmbeddedPlayer(song.url)}
+                </div>
+            `;
+            
+            // Save song selection to user history
+            songCard.addEventListener('click', function() {
+                fetch('/save_song_selection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        emotion: emotion,
+                        song_id: song.url
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Song selection saved successfully');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving song selection:', error);
+                });
+            });
+            
+            songsList.appendChild(songCard);
         });
     }
 
@@ -426,8 +512,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 emotionItem.click();
             } else if (['Pregnant', 'Depression', 'Trouble Sleeping', 'Travelling', 'Stressed', 'Lonely', 'Excited'].includes(emotion)) {
                 // Show more emotions grid and title, then select the special emotion
-                moreEmotionsGrid.style.display = 'grid';
-                moreEmotionsTitle.style.display = 'block';
+                if (moreEmotionsGrid) moreEmotionsGrid.style.display = 'grid';
+                if (moreEmotionsTitle) moreEmotionsTitle.style.display = 'block';
                 const specialEmotionItem = document.querySelector(`.emotion-item[data-emotion="${emotion}"]`);
                 if (specialEmotionItem) {
                     specialEmotionItem.click();
@@ -502,4 +588,76 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return `<a href="${url}" target="_blank" class="song-link">Open in new tab</a>`;
     }
+
+    // Add CSS for language filtering features
+    const style = document.createElement('style');
+    style.textContent = `
+        .loading-songs {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading-songs i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .no-songs-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .no-songs-message i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: 20px;
+            background: #ffe6e6;
+            color: #d00;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .song-language {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            display: inline-block;
+        }
+        
+        .emotion-item.active, .emotion-item.selected {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .highlight, .drag-over {
+            border-color: #667eea !important;
+            background: rgba(102, 126, 234, 0.1) !important;
+        }
+        
+        .song-card {
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .song-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+    `;
+    document.head.appendChild(style);
 });

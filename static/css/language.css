@@ -162,6 +162,19 @@ body {
     100% { transform: rotate(360deg); }
 }
 
+.signup-note {
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    color: #4caf50;
+}
+
+.signup-note i {
+    margin-right: 8px;
+}
+
 @media (max-width: 768px) {
     .language-container {
         padding: 30px 20px;
