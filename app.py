@@ -573,7 +573,7 @@ def language_selection():
     if user_languages:
         return redirect(url_for('welcome'))
     
-    return render_template('language_selection.html')
+    return render_template('language.html')
 
 # Save language preferences route
 @app.route('/save_language_preferences', methods=['POST'])
