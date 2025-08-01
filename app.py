@@ -68,7 +68,7 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Create users table (existing)
+    # Create users table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -81,7 +81,18 @@ def init_db():
     )
     ''')
     
-    # Create user_history table (existing)
+    # Create user_language_preferences table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS user_language_preferences (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        language TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    )
+    ''')
+    
+    # Create user_history table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS user_history (
         id TEXT PRIMARY KEY,
@@ -93,7 +104,7 @@ def init_db():
     )
     ''')
     
-    # Create songs table (new)
+    # Create songs table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS songs (
         id TEXT PRIMARY KEY,
@@ -313,12 +324,29 @@ def reset_password(token):
     
     return render_template('reset_password.html', token=token)
 
-# Function for get relevant songs from the database
-def get_songs_for_emotion(emotion):
+# Function for get relevant songs from the database based on user's language preferences
+def get_songs_for_emotion(emotion, user_id=None):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute('SELECT * FROM songs WHERE emotion = %s', (emotion,))
+    if user_id:
+        # Get user's language preferences
+        cursor.execute('SELECT language FROM user_language_preferences WHERE user_id = %s', (user_id,))
+        user_languages = [row['language'] for row in cursor.fetchall()]
+        
+        if user_languages:
+            # Get songs that match the emotion and user's preferred languages
+            placeholders = ','.join(['%s'] * len(user_languages))
+            query = f'SELECT * FROM songs WHERE emotion = %s AND language IN ({placeholders})'
+            params = [emotion] + user_languages
+            cursor.execute(query, params)
+        else:
+            # If no language preferences, get all songs for the emotion
+            cursor.execute('SELECT * FROM songs WHERE emotion = %s', (emotion,))
+    else:
+        # If no user_id provided, get all songs for the emotion
+        cursor.execute('SELECT * FROM songs WHERE emotion = %s', (emotion,))
+    
     songs = cursor.fetchall()
     
     cursor.close()
@@ -496,12 +524,72 @@ def save_user_history(user_id, emotion, song_id=None):
     cursor.close()
     conn.close()
 
+# Helper function to get user's language preferences
+def get_user_language_preferences(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT language FROM user_language_preferences WHERE user_id = %s', (user_id,))
+    languages = [row['language'] for row in cursor.fetchall()]
+    
+    cursor.close()
+    conn.close()
+    
+    return languages
+
+# Helper function to save user's language preferences
+def save_user_language_preferences(user_id, languages):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Delete existing preferences
+    cursor.execute('DELETE FROM user_language_preferences WHERE user_id = %s', (user_id,))
+    
+    # Insert new preferences
+    for language in languages:
+        pref_id = str(uuid.uuid4())
+        cursor.execute('''
+            INSERT INTO user_language_preferences (id, user_id, language)
+            VALUES (%s, %s, %s)
+        ''', (pref_id, user_id, language))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+
 # Authentication Routes
 @app.route('/')
 def index():
     if 'user_id' in session:
         return redirect(url_for('welcome'))
     return redirect(url_for('login'))
+
+# Language selection route
+@app.route('/language_selection')
+@login_required
+def language_selection():
+    # Check if user has already selected languages
+    user_languages = get_user_language_preferences(session['user_id'])
+    if user_languages:
+        return redirect(url_for('welcome'))
+    
+    return render_template('language_selection.html')
+
+# Save language preferences route
+@app.route('/save_language_preferences', methods=['POST'])
+@login_required
+def save_language_preferences():
+    data = request.json
+    languages = data.get('languages', [])
+    
+    if not languages:
+        return jsonify({"success": False, "error": "Please select at least one language"}), 400
+    
+    try:
+        save_user_language_preferences(session['user_id'], languages)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # Admin Routes
 @app.route('/admin')
@@ -627,6 +715,12 @@ def login():
             # Redirect based on admin status
             if user['is_admin']:
                 return redirect(url_for('admin_dashboard'))
+            
+            # Check if user has selected language preferences
+            user_languages = get_user_language_preferences(user['id'])
+            if not user_languages:
+                return redirect(url_for('language_selection'))
+            
             return redirect(url_for('welcome'))
         
         flash('Invalid username or password')
@@ -689,7 +783,8 @@ def signup():
             cursor.close()
             conn.close()
             
-            return redirect(url_for('welcome'))
+            # Redirect to language selection after successful signup
+            return redirect(url_for('language_selection'))
             
         except Exception as e:
             conn.rollback()
@@ -719,6 +814,11 @@ def settings():
 @app.route('/welcome')
 @login_required
 def welcome():
+    # Check if user has selected language preferences
+    user_languages = get_user_language_preferences(session['user_id'])
+    if not user_languages:
+        return redirect(url_for('language_selection'))
+    
     return render_template('welcome.html', username=session.get('name', 'User'))
 
 @app.route('/detect')
@@ -769,8 +869,8 @@ def process_emotion():
             # Save to history
             save_user_history(session['user_id'], dominant_emotion)
             
-            # Get recommendations
-            recommendations = get_songs_for_emotion(dominant_emotion)
+            # Get recommendations based on user's language preferences
+            recommendations = get_songs_for_emotion(dominant_emotion, session['user_id'])
             
             return jsonify({
                 "dominant_emotion": dominant_emotion,
@@ -785,11 +885,11 @@ def process_emotion():
         print(f"Error in process_emotion: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
-# Add this new route for getting songs by emotion
+# Add this new route for getting songs by emotion with language filtering
 @app.route('/get_songs/<emotion>')
 @login_required
 def get_songs(emotion):
-    songs = get_songs_for_emotion(emotion)
+    songs = get_songs_for_emotion(emotion, session['user_id'])
     return jsonify(songs)
 
 @app.route('/save_song_selection', methods=['POST'])
