@@ -6,39 +6,242 @@
     <title>Admin Dashboard - Moodify</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
     <div class="admin-container">
         <aside class="admin-sidebar">
-            <h2>Admin Panel</h2>
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-music"></i>
+                    <h2>Moodify Admin</h2>
+                </div>
+            </div>
             <nav>
                 <ul>
-                    <li><a href="{{ url_for('admin_dashboard') }}" class="active">Dashboard</a></li>
-                    <li><a href="{{ url_for('admin_songs') }}">Song Management</a></li>
-                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                    <li><a href="{{ url_for('admin_dashboard') }}" class="nav-link active">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a></li>
+                    <li><a href="{{ url_for('admin_songs') }}" class="nav-link">
+                        <i class="fas fa-music"></i>
+                        <span>Song Management</span>
+                    </a></li>
+                    <li><a href="#" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>User Analytics</span>
+                    </a></li>
+                    <li><a href="#" class="nav-link">
+                        <i class="fas fa-heart"></i>
+                        <span>Emotion Insights</span>
+                    </a></li>
+                    <li><a href="{{ url_for('logout') }}" class="nav-link logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a></li>
                 </ul>
             </nav>
         </aside>
         
         <main class="admin-content">
-            <h1>Admin Dashboard</h1>
-            <p>Welcome, {{ session.name }} (Admin)</p>
+            <div class="content-header">
+                <div class="header-left">
+                    <h1>Dashboard Overview</h1>
+                    <p>Welcome back, {{ session.name }}! Here's what's happening with Moodify today.</p>
+                </div>
+                <div class="header-right">
+                    <div class="datetime">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-datetime"></span>
+                    </div>
+                </div>
+            </div>
             
-            <div class="admin-stats">
-                <div class="stat-card">
-                    <h3>Total Users</h3>
-                    <p>{{ user_count }}</p>
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card users">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Total Users</h3>
+                        <div class="stat-number">{{ user_count or 0 }}</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>+12% from last month</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <h3>Total Songs</h3>
-                    <p>{{ song_count }}</p>
+                
+                <div class="stat-card songs">
+                    <div class="stat-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Total Songs</h3>
+                        <div class="stat-number">{{ song_count or 0 }}</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>+8% from last month</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <h3>Emotion Detections</h3>
-                    <p>{{ detection_count }}</p>
+                
+                <div class="stat-card detections">
+                    <div class="stat-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Emotion Detections</h3>
+                        <div class="stat-number">{{ detection_count or 0 }}</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>+25% from last month</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card active-sessions">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Active Sessions</h3>
+                        <div class="stat-number" id="active-sessions">0</div>
+                        <div class="stat-change neutral">
+                            <i class="fas fa-minus"></i>
+                            <span>Live data</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Charts Section -->
+            <div class="charts-section">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-heart"></i> Emotion Distribution</h3>
+                        <div class="chart-controls">
+                            <select id="emotion-period">
+                                <option value="7">Last 7 days</option>
+                                <option value="30" selected>Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <canvas id="emotionChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-chart-line"></i> User Activity</h3>
+                        <div class="chart-controls">
+                            <select id="activity-period">
+                                <option value="7">Last 7 days</option>
+                                <option value="30" selected>Last 30 days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Additional Analytics -->
+            <div class="analytics-section">
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-globe"></i> Language Distribution</h3>
+                    </div>
+                    <div class="language-stats">
+                        <div class="language-item">
+                            <span class="language-name">English</span>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 65%"></div>
+                            </div>
+                            <span class="percentage">65%</span>
+                        </div>
+                        <div class="language-item">
+                            <span class="language-name">Sinhala</span>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 20%"></div>
+                            </div>
+                            <span class="percentage">20%</span>
+                        </div>
+                        <div class="language-item">
+                            <span class="language-name">Hindi</span>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 8%"></div>
+                            </div>
+                            <span class="percentage">8%</span>
+                        </div>
+                        <div class="language-item">
+                            <span class="language-name">Tamil</span>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 4%"></div>
+                            </div>
+                            <span class="percentage">4%</span>
+                        </div>
+                        <div class="language-item">
+                            <span class="language-name">Other</span>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 3%"></div>
+                            </div>
+                            <span class="percentage">3%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-clock"></i> Recent Activity</h3>
+                    </div>
+                    <div class="activity-feed">
+                        <div class="activity-item">
+                            <div class="activity-icon user-icon">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="activity-content">
+                                <span class="activity-text">New user registered</span>
+                                <span class="activity-time">2 minutes ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon emotion-icon">
+                                <i class="fas fa-smile"></i>
+                            </div>
+                            <div class="activity-content">
+                                <span class="activity-text">Happy emotion detected</span>
+                                <span class="activity-time">5 minutes ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon song-icon">
+                                <i class="fas fa-music"></i>
+                            </div>
+                            <div class="activity-content">
+                                <span class="activity-text">New song added to database</span>
+                                <span class="activity-time">15 minutes ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon emotion-icon">
+                                <i class="fas fa-meh"></i>
+                            </div>
+                            <div class="activity-content">
+                                <span class="activity-text">Sad emotion detected</span>
+                                <span class="activity-time">22 minutes ago</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
+    <footer class="admin-footer">
+        <p>&copy; 2025 Moodify. All rights reserved.</p>
+    </footer>
+    
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 </body>
 </html>
