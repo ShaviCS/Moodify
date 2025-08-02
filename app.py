@@ -1034,27 +1034,75 @@ def logout():
 @app.route('/profile')
 @login_required
 def profile():
-    # Get user data from database
-    user_data = get_user_by_id(session['user_id'])
-    
-    # Get user statistics
-    stats = get_user_statistics(session['user_id'])
-    user_data.update(stats)
-    
-    # Get language preferences
-    languages = get_user_language_preferences(session['user_id'])
-    user_data['language_preferences'] = languages
-    
-    return render_template('profile.html', user=user_data)
+    try:
+        # Get user data from database
+        user_data = get_user_by_id(session['user_id'])
+        
+        if not user_data:
+            flash('User not found')
+            return redirect(url_for('welcome'))
+        
+        # Get user statistics
+        stats = get_user_statistics(session['user_id'])
+        
+        # Get language preferences
+        languages = get_user_language_preferences(session['user_id'])
+        
+        # Combine all data for template
+        profile_data = {
+            'id': user_data.get('id'),
+            'name': user_data.get('name'),
+            'username': user_data.get('username'),
+            'email': user_data.get('email'),
+            'avatar_data': user_data.get('avatar_data'),
+            'created_at': user_data.get('created_at'),
+            'is_admin': user_data.get('is_admin', False),
+            'preferred_languages': ','.join(languages) if languages else '',
+            'language_preferences': languages,
+            'emotion_detections_count': stats.get('emotion_detections_count', 0),
+            'songs_played_count': stats.get('songs_played_count', 0),
+            'unique_emotions_count': stats.get('unique_emotions_count', 0),
+            'total_sessions': 0  # You can implement session tracking later
+        }
+        
+        return render_template('profile.html', user=profile_data)
+        
+    except Exception as e:
+        print(f"Error in profile route: {e}")
+        flash('An error occurred while loading your profile')
+        return redirect(url_for('welcome'))
 
 # Settings page route
 @app.route('/settings')
 @login_required
 def settings():
-    user_data = get_user_by_id(session['user_id'])
-    languages = get_user_language_preferences(session['user_id'])
-    user_data['language_preferences'] = languages
-    return render_template('settings.html', user=user_data)
+    try:
+        user_data = get_user_by_id(session['user_id'])
+        
+        if not user_data:
+            flash('User not found')
+            return redirect(url_for('welcome'))
+        
+        languages = get_user_language_preferences(session['user_id'])
+        
+        # Combine data for template
+        settings_data = {
+            'id': user_data.get('id'),
+            'name': user_data.get('name'),
+            'username': user_data.get('username'),
+            'email': user_data.get('email'),
+            'avatar_data': user_data.get('avatar_data'),
+            'created_at': user_data.get('created_at'),
+            'is_admin': user_data.get('is_admin', False),
+            'language_preferences': languages
+        }
+        
+        return render_template('settings.html', user=settings_data)
+        
+    except Exception as e:
+        print(f"Error in settings route: {e}")
+        flash('An error occurred while loading settings')
+        return redirect(url_for('welcome'))
 
 # Update profile route
 @app.route('/update_profile', methods=['POST'])
