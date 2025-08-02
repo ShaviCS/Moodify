@@ -1,5 +1,3 @@
-/* Enhanced Admin Dashboard Styles */
-
 .admin-container {
     display: flex;
     min-height: 100vh;
@@ -249,6 +247,9 @@
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.08);
     padding: 25px;
+    height: 400px; /* Fixed height */
+    display: flex;
+    flex-direction: column;
 }
 
 .chart-header {
@@ -256,6 +257,7 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .chart-header h3 {
@@ -277,6 +279,21 @@
     background: white;
     color: #2c3e50;
     font-size: 0.9rem;
+}
+
+/* Chart canvas container */
+.chart-canvas-container {
+    flex: 1;
+    position: relative;
+    min-height: 0; /* Important for flex child */
+}
+
+.chart-canvas-container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* Stats Section */

@@ -24,6 +24,9 @@ function initializeEmotionChart() {
     const ctx = document.getElementById('emotionChart');
     if (!ctx) return;
     
+    // Set canvas size explicitly
+    ctx.style.maxHeight = '300px';
+    
     const emotionChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -39,8 +42,9 @@ function initializeEmotionChart() {
                     '#34495e',
                     '#e67e22'
                 ],
-                borderWidth: 0,
-                hoverOffset: 10
+                borderWidth: 2,
+                borderColor: '#fff',
+                hoverOffset: 8
             }]
         },
         options: {
@@ -50,10 +54,10 @@ function initializeEmotionChart() {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        padding: 20,
+                        padding: 15,
                         usePointStyle: true,
                         font: {
-                            size: 12
+                            size: 11
                         }
                     }
                 },
@@ -67,8 +71,9 @@ function initializeEmotionChart() {
             },
             animation: {
                 animateRotate: true,
-                duration: 2000
-            }
+                duration: 1500
+            },
+            cutout: '50%'
         }
     });
     
@@ -81,6 +86,9 @@ function initializeActivityChart() {
     const ctx = document.getElementById('activityChart');
     if (!ctx) return;
     
+    // Set canvas size explicitly
+    ctx.style.maxHeight = '300px';
+    
     const activityChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -90,27 +98,27 @@ function initializeActivityChart() {
                 data: [65, 78, 90, 81, 96, 55, 40],
                 borderColor: '#3498db',
                 backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                borderWidth: 3,
+                borderWidth: 2,
                 fill: true,
                 tension: 0.4,
                 pointBackgroundColor: '#3498db',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
-                pointRadius: 6,
-                pointHoverRadius: 8
+                pointRadius: 4,
+                pointHoverRadius: 6
             }, {
                 label: 'New Users',
                 data: [28, 35, 42, 38, 45, 25, 18],
                 borderColor: '#e74c3c',
                 backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                borderWidth: 3,
+                borderWidth: 2,
                 fill: true,
                 tension: 0.4,
                 pointBackgroundColor: '#e74c3c',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
-                pointRadius: 6,
-                pointHoverRadius: 8
+                pointRadius: 4,
+                pointHoverRadius: 6
             }]
         },
         options: {
@@ -120,10 +128,10 @@ function initializeActivityChart() {
                 legend: {
                     position: 'top',
                     labels: {
-                        padding: 20,
+                        padding: 15,
                         usePointStyle: true,
                         font: {
-                            size: 12
+                            size: 11
                         }
                     }
                 }
@@ -132,11 +140,11 @@ function initializeActivityChart() {
                 y: {
                     beginAtZero: true,
                     grid: {
-                        color: 'rgba(0,0,0,0.1)'
+                        color: 'rgba(0,0,0,0.05)'
                     },
                     ticks: {
                         font: {
-                            size: 11
+                            size: 10
                         }
                     }
                 },
@@ -146,7 +154,7 @@ function initializeActivityChart() {
                     },
                     ticks: {
                         font: {
-                            size: 11
+                            size: 10
                         }
                     }
                 }
@@ -156,7 +164,7 @@ function initializeActivityChart() {
                 mode: 'index'
             },
             animation: {
-                duration: 2000,
+                duration: 1500,
                 easing: 'easeInOutQuart'
             }
         }
