@@ -18,6 +18,15 @@
     border-bottom: 1px solid #34495e;
 }
 
+.logo-container {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.logo-container .logo {
+    height: 40px;
+}
+
 .admin-logo i {
     font-size: 2rem;
     color: #3498db;
@@ -27,7 +36,7 @@
 .admin-logo h2 {
     margin: 0;
     font-size: 1.5rem;
-    font-weight: 300;
+    font-weight: 800;
 }
 
 .admin-sidebar nav {
