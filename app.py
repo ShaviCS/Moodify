@@ -973,35 +973,35 @@ def save_language_preferences():
         return jsonify({"success": False, "error": str(e)}), 500
 
 # Admin Routes
-@app.route('/admin')
-@login_required
-def admin_dashboard():
-    # Check if user is admin
-    if not session.get('is_admin', False):
-        flash('You do not have permission to access this page')
-        return redirect(url_for('welcome'))
-    
-    return render_template('admin/dashboard.html')
-
 # @app.route('/admin')
-# @admin_required
+# @login_required
 # def admin_dashboard():
-#     """Enhanced admin dashboard with statistics and charts"""
-#     try:
-#         stats = get_admin_statistics()
+#     # Check if user is admin
+#     if not session.get('is_admin', False):
+#         flash('You do not have permission to access this page')
+#         return redirect(url_for('welcome'))
+    
+#     return render_template('admin/dashboard.html')
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """Enhanced admin dashboard with statistics and charts"""
+    try:
+        stats = get_admin_statistics()
         
-#         return render_template('admin/dashboard.html', 
-#                              user_count=stats['user_count'],
-#                              song_count=stats['song_count'],
-#                              detection_count=stats['detection_count'],
-#                              emotion_icons=EMOTION_ICONS)
-#     except Exception as e:
-#         print(f"Error in admin dashboard: {e}")
-#         return render_template('admin/dashboard.html', 
-#                              user_count=0,
-#                              song_count=0,
-#                              detection_count=0,
-#                              emotion_icons=EMOTION_ICONS)
+        return render_template('admin/dashboard.html', 
+                             user_count=stats['user_count'],
+                             song_count=stats['song_count'],
+                             detection_count=stats['detection_count'],
+                             emotion_icons=EMOTION_ICONS)
+    except Exception as e:
+        print(f"Error in admin dashboard: {e}")
+        return render_template('admin/dashboard.html', 
+                             user_count=0,
+                             song_count=0,
+                             detection_count=0,
+                             emotion_icons=EMOTION_ICONS)
 
 @app.route('/admin/songs')
 @admin_required
@@ -1200,7 +1200,7 @@ def search_songs_api():
 def login():
     if 'user_id' in session:
         if session.get('is_admin', False):
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin'))
         return redirect(url_for('welcome'))
         
     if request.method == 'POST':
@@ -1229,7 +1229,7 @@ def login():
             
             # Redirect based on admin status
             if user['is_admin']:
-                return redirect(url_for('admin_dashboard'))
+                return redirect(url_for('admin'))
             
             # Directly redirect to welcome page (no language check)
             return redirect(url_for('welcome'))
