@@ -983,25 +983,7 @@ def admin_dashboard():
     
     return render_template('admin/dashboard.html')
 
-@app.route('/admin/dashboard')
-@admin_required
-def admin_dashboard():
-    """Enhanced admin dashboard with statistics and charts"""
-    try:
-        stats = get_admin_statistics()
-        
-        return render_template('admin/dashboard.html', 
-                             user_count=stats['user_count'],
-                             song_count=stats['song_count'],
-                             detection_count=stats['detection_count'],
-                             emotion_icons=EMOTION_ICONS)
-    except Exception as e:
-        print(f"Error in admin dashboard: {e}")
-        return render_template('admin/dashboard.html', 
-                             user_count=0,
-                             song_count=0,
-                             detection_count=0,
-                             emotion_icons=EMOTION_ICONS)
+
 
 @app.route('/admin/songs')
 @admin_required
