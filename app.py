@@ -794,6 +794,100 @@ def save_user_language_preferences(user_id, languages):
     cursor.close()
     conn.close()
 
+# Admin functions
+def get_dashboard_statistics():
+    """Get comprehensive dashboard statistics"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get total users count
+        cursor.execute('SELECT COUNT(*) FROM users')
+        user_count = cursor.fetchone()[0]
+        
+        # Get total songs count
+        cursor.execute('SELECT COUNT(*) FROM songs')
+        song_count = cursor.fetchone()[0]
+        
+        # Get total emotion detections count
+        cursor.execute('SELECT COUNT(*) FROM user_history')
+        detection_count = cursor.fetchone()[0]
+        
+        # Get active sessions (users who had activity in last 24 hours)
+        cursor.execute('''
+            SELECT COUNT(DISTINCT user_id) FROM user_history 
+            WHERE timestamp > NOW() - INTERVAL '24 hours'
+        ''')
+        active_sessions = cursor.fetchone()[0]
+        
+        # Get emotion distribution
+        cursor.execute('''
+            SELECT emotion, COUNT(*) as count 
+            FROM user_history 
+            GROUP BY emotion 
+            ORDER BY count DESC
+        ''')
+        emotion_distribution = cursor.fetchall()
+        
+        # Get daily activity for last 7 days
+        cursor.execute('''
+            SELECT DATE(timestamp) as date, COUNT(*) as count
+            FROM user_history 
+            WHERE timestamp > NOW() - INTERVAL '7 days'
+            GROUP BY DATE(timestamp)
+            ORDER BY date
+        ''')
+        daily_activity = cursor.fetchall()
+        
+        # Get language preferences distribution
+        cursor.execute('''
+            SELECT language, COUNT(*) as count
+            FROM user_language_preferences
+            GROUP BY language
+            ORDER BY count DESC
+        ''')
+        language_distribution = cursor.fetchall()
+        
+        # Get recent activity (last 10 activities)
+        cursor.execute('''
+            SELECT uh.emotion, uh.timestamp, u.name, s.title, s.artist
+            FROM user_history uh
+            JOIN users u ON uh.user_id = u.id
+            LEFT JOIN songs s ON uh.song_id = s.id
+            ORDER BY uh.timestamp DESC
+            LIMIT 10
+        ''')
+        recent_activity = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            'user_count': user_count,
+            'song_count': song_count,
+            'detection_count': detection_count,
+            'active_sessions': active_sessions,
+            'emotion_distribution': [dict(row) for row in emotion_distribution],
+            'daily_activity': [dict(row) for row in daily_activity],
+            'language_distribution': [dict(row) for row in language_distribution],
+            'recent_activity': [dict(row) for row in recent_activity]
+        }
+        
+    except Exception as e:
+        print(f"Error getting dashboard statistics: {e}")
+        cursor.close()
+        conn.close()
+        return {
+            'user_count': 0,
+            'song_count': 0,
+            'detection_count': 0,
+            'active_sessions': 0,
+            'emotion_distribution': [],
+            'daily_activity': [],
+            'language_distribution': [],
+            'recent_activity': []
+        }
+
 # Authentication Routes
 @app.route('/')
 def index():
@@ -832,7 +926,111 @@ def admin_dashboard():
         flash('You do not have permission to access this page')
         return redirect(url_for('welcome'))
     
-    return render_template('admin/dashboard.html')
+    # Get dashboard statistics
+    stats = get_dashboard_statistics()
+    
+    return render_template('admin/dashboard.html', **stats)
+
+# Add new API endpoint for real-time dashboard updates
+@app.route('/admin/get_dashboard_stats')
+@login_required
+def get_dashboard_stats():
+    # Check if user is admin
+    if not session.get('is_admin', False):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    
+    try:
+        stats = get_dashboard_statistics()
+        return jsonify({
+            "success": True,
+            **stats
+        })
+    except Exception as e:
+        print(f"Error getting dashboard stats: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# Add route for emotion analytics
+@app.route('/admin/emotion_analytics')
+@login_required
+def admin_emotion_analytics():
+    if not session.get('is_admin', False):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    
+    period = request.args.get('period', '7')  # 7, 30, or 90 days
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+            SELECT emotion, COUNT(*) as count 
+            FROM user_history 
+            WHERE timestamp > NOW() - INTERVAL '%s days'
+            GROUP BY emotion 
+            ORDER BY count DESC
+        ''', (period,))
+        
+        emotion_data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "data": [dict(row) for row in emotion_data]
+        })
+        
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# Add route for activity analytics
+@app.route('/admin/activity_analytics')
+@login_required
+def admin_activity_analytics():
+    if not session.get('is_admin', False):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    
+    period = request.args.get('period', '7')  # 7 or 30 days
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        if period == '7':
+            # Daily data for last 7 days
+            cursor.execute('''
+                SELECT DATE(timestamp) as date, COUNT(*) as detections,
+                       COUNT(DISTINCT user_id) as users
+                FROM user_history 
+                WHERE timestamp > NOW() - INTERVAL '7 days'
+                GROUP BY DATE(timestamp)
+                ORDER BY date
+            ''')
+        else:
+            # Weekly data for last 30 days
+            cursor.execute('''
+                SELECT DATE_TRUNC('week', timestamp) as week, COUNT(*) as detections,
+                       COUNT(DISTINCT user_id) as users
+                FROM user_history 
+                WHERE timestamp > NOW() - INTERVAL '30 days'
+                GROUP BY DATE_TRUNC('week', timestamp)
+                ORDER BY week
+            ''')
+        
+        activity_data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "data": [dict(row) for row in activity_data]
+        })
+        
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/admin/songs')
 @login_required
