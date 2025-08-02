@@ -6,222 +6,99 @@
     <title>Song Management - Moodify Admin</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-songs.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="admin-container">
         <aside class="admin-sidebar">
-            <div class="admin-logo">
-                <i class="fas fa-music"></i>
-                <h2>Moodify Admin</h2>
-            </div>
+            <h2>Admin Panel</h2>
             <nav>
                 <ul>
-                    <li><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                    <li><a href="{{ url_for('admin_songs') }}" class="active"><i class="fas fa-music"></i> Song Management</a></li>
-                    <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                    <li><a href="{{ url_for('admin_songs') }}" class="active">Song Management</a></li>
+                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
                 </ul>
             </nav>
         </aside>
         
         <main class="admin-content">
-            <div class="song-management-container">
-                <!-- Header -->
-                <div class="song-management-header">
-                    <h1><i class="fas fa-music"></i>Song Management</h1>
-                    <div class="welcome-card">
-                        <p>Welcome back, <strong>{{ session.name or 'Admin' }}</strong></p>
-                        <span class="admin-badge">Administrator</span>
-                    </div>
+            <h1>Song Management</h1>
+            
+            <div class="song-management">
+                <!-- Add New Song Form -->
+                <div class="add-song-form">
+                    <h3>Add New Song</h3>
+                    <form id="add-song-form">
+                        <div class="form-group">
+                            <label for="emotion">Emotion</label>
+                            <select id="emotion" name="emotion" required>
+                                <option value="Angry">Angry</option>
+                                <option value="Disgust">Disgust</option>
+                                <option value="Fear">Fear</option>
+                                <option value="Happy">Happy</option>
+                                <option value="Neutral">Neutral</option>
+                                <option value="Sad">Sad</option>
+                                <option value="Surprise">Surprise</option>
+                                <option value="Pregnant">Pregnant</option>
+                                <option value="Depression">Depression</option>
+                                <option value="Trouble Sleeping">Trouble Sleeping</option>
+                                <option value="Travelling">Travelling</option>
+                                <option value="Stressed">Stressed</option>
+                                <option value="Lonely">Lonely</option>
+                                <option value="Excited">Excited</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="language">Language</label>
+                            <select id="language" name="language" required>
+                                <option value="English">English</option>
+                                <option value="Sinhala">Sinhala</option>
+                                <option value="Hindi">Hindi</option>
+                                <option value="Tamil">Tamil</option>
+                                <option value="Korean">Korean</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="title">Title</label>
+                            <input type="text" id="title" name="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="artist">Artist</label>
+                            <input type="text" id="artist" name="artist" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="url">URL (Spotify or YouTube)</label>
+                            <input type="url" id="url" name="url" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Add Song</button>
+                    </form>
                 </div>
-
-                <!-- Statistics Cards -->
-                <div class="song-stats">
-                    <div class="stat-card total-songs">
-                        <h4>Total Songs</h4>
-                        <p class="stat-number" id="total-songs-count">{{ songs_by_emotion.values() | sum(attribute='|length') | default(0) }}</p>
-                    </div>
-                    <div class="stat-card total-emotions">
-                        <h4>Emotions Covered</h4>
-                        <p class="stat-number">{{ songs_by_emotion.keys() | length }}</p>
-                    </div>
-                    <div class="stat-card total-languages">
-                        <h4>Languages</h4>
-                        <p class="stat-number" id="total-languages-count">-</p>
-                    </div>
-                </div>
-
-                <!-- Search and Filter Bar -->
-                <div class="search-filter-bar">
-                    <div class="search-box">
-                        <input type="text" id="search-songs" placeholder="Search songs, artists, or emotions...">
-                        <i class="fas fa-search"></i>
-                    </div>
-                    <select class="filter-select" id="emotion-filter">
-                        <option value="">All Emotions</option>
-                        {% for emotion in songs_by_emotion.keys() %}
-                        <option value="{{ emotion }}">{{ emotion }}</option>
-                        {% endfor %}
-                    </select>
-                    <select class="filter-select" id="language-filter">
-                        <option value="">All Languages</option>
-                        <option value="English">English</option>
-                        <option value="Sinhala">Sinhala</option>
-                        <option value="Hindi">Hindi</option>
-                        <option value="Tamil">Tamil</option>
-                        <option value="Korean">Korean</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-
-                <!-- Alert Messages -->
-                <div id="alert-container"></div>
                 
-                <div class="song-management">
-                    <!-- Add New Song Form -->
-                    <div class="add-song-form">
-                        <h3><i class="fas fa-plus-circle"></i>Add New Song</h3>
-                        <form id="add-song-form">
-                            <div class="form-group">
-                                <label for="emotion"><i class="fas fa-smile"></i> Emotion</label>
-                                <select id="emotion" name="emotion" required>
-                                    <option value="">Select Emotion</option>
-                                    <option value="Angry">😠 Angry</option>
-                                    <option value="Disgust">🤢 Disgust</option>
-                                    <option value="Fear">😨 Fear</option>
-                                    <option value="Happy">😊 Happy</option>
-                                    <option value="Neutral">😐 Neutral</option>
-                                    <option value="Sad">😢 Sad</option>
-                                    <option value="Surprise">😲 Surprise</option>
-                                    <option value="Pregnant">🤰 Pregnant</option>
-                                    <option value="Depression">😔 Depression</option>
-                                    <option value="Trouble Sleeping">😴 Trouble Sleeping</option>
-                                    <option value="Travelling">✈️ Travelling</option>
-                                    <option value="Stressed">😰 Stressed</option>
-                                    <option value="Lonely">😞 Lonely</option>
-                                    <option value="Excited">🤩 Excited</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="language"><i class="fas fa-globe"></i> Language</label>
-                                <select id="language" name="language" required>
-                                    <option value="">Select Language</option>
-                                    <option value="English">🇺🇸 English</option>
-                                    <option value="Sinhala">🇱🇰 Sinhala</option>
-                                    <option value="Hindi">🇮🇳 Hindi</option>
-                                    <option value="Tamil">🇮🇳 Tamil</option>
-                                    <option value="Korean">🇰🇷 Korean</option>
-                                    <option value="Other">🌍 Other</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="title"><i class="fas fa-music"></i> Song Title</label>
-                                <input type="text" id="title" name="title" placeholder="Enter song title" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="artist"><i class="fas fa-user"></i> Artist</label>
-                                <input type="text" id="artist" name="artist" placeholder="Enter artist name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="url"><i class="fas fa-link"></i> URL (Spotify or YouTube)</label>
-                                <input type="url" id="url" name="url" placeholder="https://..." required>
-                            </div>
-                            <button type="submit" class="btn-primary">
-                                <i class="fas fa-plus"></i>
-                                Add Song
-                            </button>
-                        </form>
-                    </div>
-                    
-                    <!-- Songs by Emotion -->
-                    <div class="songs-by-emotion">
-                        <div class="songs-header">
-                            <i class="fas fa-list-music"></i>
-                            <h2>Songs Library</h2>
-                        </div>
-                        <div class="songs-content">
-                            {% if songs_by_emotion %}
-                                {% for emotion, songs in songs_by_emotion.items() %}
-                                <div class="emotion-section" data-emotion="{{ emotion }}">
-                                    <div class="emotion-header" onclick="toggleEmotion(this)">
-                                        <div class="emotion-header-left">
-                                            <div class="emotion-icon">
-                                                {% if emotion == 'Happy' %}
-                                                    <i class="fas fa-smile"></i>
-                                                {% elif emotion == 'Sad' %}
-                                                    <i class="fas fa-frown"></i>
-                                                {% elif emotion == 'Angry' %}
-                                                    <i class="fas fa-angry"></i>
-                                                {% elif emotion == 'Fear' %}
-                                                    <i class="fas fa-grimace"></i>
-                                                {% elif emotion == 'Surprise' %}
-                                                    <i class="fas fa-surprise"></i>
-                                                {% elif emotion == 'Disgust' %}
-                                                    <i class="fas fa-dizzy"></i>
-                                                {% else %}
-                                                    <i class="fas fa-meh"></i>
-                                                {% endif %}
-                                            </div>
-                                            <h3>{{ emotion }}</h3>
-                                        </div>
-                                        <div class="emotion-header-right">
-                                            <span class="song-count">{{ songs|length }} songs</span>
-                                            <i class="fas fa-chevron-down toggle-icon"></i>
-                                        </div>
-                                    </div>
-                                    <div class="song-list">
-                                        {% if songs %}
-                                            {% for song in songs %}
-                                            <div class="song-item" data-song-id="{{ song.id }}" data-emotion="{{ emotion }}" data-language="{{ song.language }}">
-                                                <div class="song-info">
-                                                    <h4>{{ song.title }}</h4>
-                                                    <p class="artist">by {{ song.artist }}</p>
-                                                    <p><span class="language">{{ song.language }}</span></p>
-                                                    <a href="{{ song.url }}" target="_blank">
-                                                        <i class="fas fa-external-link-alt"></i>
-                                                        Open Link
-                                                    </a>
-                                                </div>
-                                                <div class="song-actions">
-                                                    <button class="btn-danger delete-song" data-song-id="{{ song.id }}">
-                                                        <i class="fas fa-trash"></i>
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        {% else %}
-                                            <div class="empty-emotion">
-                                                <i class="fas fa-music"></i>
-                                                <p>No songs available for this emotion</p>
-                                            </div>
-                                        {% endif %}
-                                    </div>
+                <!-- Songs by Emotion -->
+                <div class="songs-by-emotion">
+                    {% for emotion, songs in songs_by_emotion.items() %}
+                    <div class="emotion-section">
+                        <h3>{{ emotion }}</h3>
+                        <div class="song-list">
+                            {% for song in songs %}
+                            <div class="song-item" data-song-id="{{ song.id }}">
+                                <div class="song-info">
+                                    <h4>{{ song.title }}</h4>
+                                    <p>{{ song.artist }}</p>
+                                    <p>Language: {{ song.language }}</p>
+                                    <a href="{{ song.url }}" target="_blank">{{ song.url }}</a>
                                 </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="empty-emotion">
-                                    <i class="fas fa-music"></i>
-                                    <p>No songs available. Add your first song using the form on the left.</p>
-                                </div>
-                            {% endif %}
+                                <button class="btn-danger delete-song" data-song-id="{{ song.id }}">Delete</button>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
         </main>
     </div>
     
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
-    <script>
-        // Calculate total languages count
-        document.addEventListener('DOMContentLoaded', function() {
-            const languages = new Set();
-            document.querySelectorAll('.language').forEach(el => {
-                languages.add(el.textContent.trim());
-            });
-            document.getElementById('total-languages-count').textContent = languages.size;
-        });
-    </script>
 </body>
 </html>
