@@ -21,8 +21,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import json
 import re
-from datetime import datetime, timedelta
-import random
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))  # Secret key for sessions
@@ -41,21 +39,6 @@ mail = Mail(app)
 
 # Create a serializer for generating secure tokens
 serializer = URLSafeTimedSerializer(app.secret_key)
-
-# Emotion icons mapping
-EMOTION_ICONS = {
-    'Happy': '😊',
-    'Sad': '😢',
-    'Angry': '😠',
-    'Fear': '😨',
-    'Surprise': '😲',
-    'Disgust': '🤢',
-    'Neutral': '😐',
-    'Excited': '🤩',
-    'Stressed': '😰',
-    'Lonely': '😔',
-    'Depression': '😞'
-}
 
 
 # Database setup with PostgreSQL
@@ -223,265 +206,6 @@ def send_reset_email(user_email, reset_token):
     except Exception as e:
         print(f"Error sending email: {str(e)}")
         return False
-    
-# Admin Functions
-def admin_required(f):
-    """Decorator to require admin access"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session or not session.get('is_admin', False):
-            flash('You do not have permission to access this page')
-            return redirect(url_for('welcome'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def get_admin_statistics():
-    """Get statistics for admin dashboard"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get user count
-        cursor.execute('SELECT COUNT(*) FROM users')
-        user_count = cursor.fetchone()[0]
-        
-        # Get song count
-        cursor.execute('SELECT COUNT(*) FROM songs')
-        song_count = cursor.fetchone()[0]
-        
-        # Get emotion detection count from user_history
-        cursor.execute('SELECT COUNT(*) FROM user_history')
-        detection_count = cursor.fetchone()[0]
-        
-        # Get active users count (users who have activity in last 30 days)
-        thirty_days_ago = datetime.now() - timedelta(days=30)
-        cursor.execute('''
-            SELECT COUNT(DISTINCT user_id) FROM user_history 
-            WHERE timestamp >= %s
-        ''', (thirty_days_ago,))
-        active_users = cursor.fetchone()[0]
-        
-        # Get most popular emotion
-        cursor.execute('''
-            SELECT emotion, COUNT(*) as count FROM user_history 
-            GROUP BY emotion ORDER BY count DESC LIMIT 1
-        ''')
-        popular_emotion_result = cursor.fetchone()
-        popular_emotion = popular_emotion_result[0] if popular_emotion_result else 'Happy'
-        
-        cursor.close()
-        conn.close()
-        
-        return {
-            'user_count': user_count,
-            'song_count': song_count,
-            'detection_count': detection_count,
-            'active_users': active_users,
-            'popular_emotion': popular_emotion
-        }
-    except Exception as e:
-        print(f"Error getting admin statistics: {e}")
-        cursor.close()
-        conn.close()
-        return {
-            'user_count': 0,
-            'song_count': 0,
-            'detection_count': 0,
-            'active_users': 0,
-            'popular_emotion': 'Happy'
-        }
-
-def get_songs_by_emotion():
-    """Get songs organized by emotion"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('''
-            SELECT id, title, artist, url, emotion, language, created_at
-            FROM songs 
-            ORDER BY emotion, title
-        ''')
-        
-        songs = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        # Organize songs by emotion
-        songs_by_emotion = {}
-        for song in songs:
-            emotion = song[4]  # emotion column
-            if emotion not in songs_by_emotion:
-                songs_by_emotion[emotion] = []
-            songs_by_emotion[emotion].append({
-                'id': song[0],
-                'title': song[1],
-                'artist': song[2],
-                'url': song[3],
-                'emotion': song[4],
-                'language': song[5],
-                'created_at': song[6]
-            })
-        
-        return songs_by_emotion
-    except Exception as e:
-        print(f"Error getting songs by emotion: {e}")
-        cursor.close()
-        conn.close()
-        return {}
-
-def get_emotion_analytics(days=30):
-    """Get emotion detection analytics from user_history"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get emotion counts from user_history within the specified days
-        since_date = datetime.now() - timedelta(days=days)
-        cursor.execute('''
-            SELECT emotion, COUNT(*) as count
-            FROM user_history 
-            WHERE timestamp >= %s
-            GROUP BY emotion
-            ORDER BY count DESC
-        ''', (since_date,))
-        
-        results = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        if not results:
-            # Return sample data if no real data exists
-            emotions = ['Happy', 'Sad', 'Excited', 'Stressed', 'Neutral', 'Angry', 'Lonely']
-            total_sample = 1000
-            data = []
-            for emotion in emotions:
-                count = random.randint(50, 200)
-                data.append({
-                    'emotion': emotion,
-                    'count': count,
-                    'percentage': round((count / total_sample) * 100, 1)
-                })
-            return data
-        
-        # Calculate total for percentages
-        total_count = sum(row[1] for row in results)
-        
-        data = []
-        for row in results:
-            emotion, count = row[0], row[1]
-            data.append({
-                'emotion': emotion,
-                'count': count,
-                'percentage': round((count / total_count) * 100, 1) if total_count > 0 else 0
-            })
-        
-        return data
-    except Exception as e:
-        print(f"Error getting emotion analytics: {e}")
-        cursor.close()
-        conn.close()
-        return []
-
-def get_user_activity_data(days=30):
-    """Get user activity data for charts"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get daily activity data
-        since_date = datetime.now() - timedelta(days=days)
-        cursor.execute('''
-            SELECT 
-                DATE(timestamp) as activity_date,
-                COUNT(DISTINCT user_id) as active_users,
-                COUNT(*) as emotion_detections
-            FROM user_history 
-            WHERE timestamp >= %s
-            GROUP BY DATE(timestamp)
-            ORDER BY activity_date
-        ''', (since_date,))
-        
-        results = cursor.fetchall()
-        
-        # Get new users data
-        cursor.execute('''
-            SELECT 
-                DATE(created_at) as signup_date,
-                COUNT(*) as new_users
-            FROM users 
-            WHERE created_at >= %s
-            GROUP BY DATE(created_at)
-            ORDER BY signup_date
-        ''', (since_date,))
-        
-        new_users_data = {row[0]: row[1] for row in cursor.fetchall()}
-        
-        cursor.close()
-        conn.close()
-        
-        activity_data = []
-        for row in results:
-            date_str = row[0].strftime('%Y-%m-%d') if hasattr(row[0], 'strftime') else str(row[0])
-            activity_data.append({
-                'date': date_str,
-                'active_users': row[1],
-                'emotion_detections': row[2],
-                'new_users': new_users_data.get(row[0], 0)
-            })
-        
-        # Fill in missing dates with zero values if needed
-        if not activity_data:
-            # Generate sample data if no real data exists
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
-            current_date = start_date
-            
-            while current_date <= end_date:
-                activity_data.append({
-                    'date': current_date.strftime('%Y-%m-%d'),
-                    'active_users': random.randint(10, 50),
-                    'emotion_detections': random.randint(20, 100),
-                    'new_users': random.randint(0, 10)
-                })
-                current_date += timedelta(days=1)
-        
-        return activity_data
-    except Exception as e:
-        print(f"Error getting user activity data: {e}")
-        cursor.close()
-        conn.close()
-        return []
-
-def get_recent_users(limit=10):
-    """Get recently registered users"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('''
-            SELECT name, username, email, created_at, is_admin
-            FROM users 
-            ORDER BY created_at DESC 
-            LIMIT %s
-        ''', (limit,))
-        
-        users = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        return [{
-            'name': user[0],
-            'username': user[1],
-            'email': user[2],
-            'created_at': user[3],
-            'is_admin': user[4]
-        } for user in users]
-    except Exception as e:
-        print(f"Error getting recent users: {e}")
-        cursor.close()
-        conn.close()
-        return []
 
 # Helper functions for user management
 def get_user_by_id(user_id):
@@ -1102,104 +826,59 @@ def save_language_preferences():
 # Admin Routes
 @app.route('/admin')
 @login_required
-@admin_required
 def admin_dashboard():
-    """Enhanced admin dashboard with statistics and charts"""
-    try:
-        stats = get_admin_statistics()
-        recent_users = get_recent_users(5)
-        
-        return render_template('admin/dashboard.html', 
-                             user_count=stats['user_count'],
-                             song_count=stats['song_count'],
-                             detection_count=stats['detection_count'],
-                             active_users=stats['active_users'],
-                             popular_emotion=stats['popular_emotion'],
-                             recent_users=recent_users,
-                             emotion_icons=EMOTION_ICONS)
-    except Exception as e:
-        print(f"Error in admin dashboard: {e}")
-        return render_template('admin/dashboard.html', 
-                             user_count=0,
-                             song_count=0,
-                             detection_count=0,
-                             active_users=0,
-                             popular_emotion='Happy',
-                             recent_users=[],
-                             emotion_icons=EMOTION_ICONS)
+    # Check if user is admin
+    if not session.get('is_admin', False):
+        flash('You do not have permission to access this page')
+        return redirect(url_for('welcome'))
+    
+    return render_template('admin/dashboard.html')
 
 @app.route('/admin/songs')
 @login_required
-@admin_required
 def admin_songs():
-    """Enhanced song management page"""
-    try:
-        songs_by_emotion = get_songs_by_emotion()
-        
-        # Get available languages and emotions for filters
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT DISTINCT language FROM songs ORDER BY language')
-        languages = [row[0] for row in cursor.fetchall()]
-        
-        cursor.execute('SELECT DISTINCT emotion FROM songs ORDER BY emotion')
-        emotions = [row[0] for row in cursor.fetchall()]
-        
-        cursor.close()
-        conn.close()
-        
-        return render_template('admin/songs.html', 
-                             songs_by_emotion=songs_by_emotion,
-                             languages=languages,
-                             emotions=emotions,
-                             emotion_icons=EMOTION_ICONS)
-    except Exception as e:
-        print(f"Error in admin songs: {e}")
-        return render_template('admin/songs.html', 
-                             songs_by_emotion={},
-                             languages=[],
-                             emotions=[],
-                             emotion_icons=EMOTION_ICONS)
+    # Check if user is admin
+    if not session.get('is_admin', False):
+        flash('You do not have permission to access this page')
+        return redirect(url_for('welcome'))
+    
+    # Get all songs grouped by emotion
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT DISTINCT emotion FROM songs ORDER BY emotion')
+    emotions = [row['emotion'] for row in cursor.fetchall()]
+    
+    songs_by_emotion = {}
+    for emotion in emotions:
+        cursor.execute('SELECT * FROM songs WHERE emotion = %s ORDER BY title', (emotion,))
+        songs_by_emotion[emotion] = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('admin/songs.html', songs_by_emotion=songs_by_emotion)
 
 @app.route('/admin/add_song', methods=['POST'])
 @login_required
-@admin_required
 def admin_add_song():
-    """Add a new song to the database with enhanced validation"""
+    if not session.get('is_admin', False):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    
+    data = request.json
+    title = data.get('title')
+    artist = data.get('artist')
+    url = data.get('url')
+    emotion = data.get('emotion')
+    language = data.get('language')
+    
+    if not all([title, artist, url, emotion, language]):
+        return jsonify({"success": False, "error": "All fields are required"}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
     try:
-        data = request.get_json()
-        
-        title = data.get('title', '').strip()
-        artist = data.get('artist', '').strip()
-        url = data.get('url', '').strip()
-        emotion = data.get('emotion', '').strip()
-        language = data.get('language', '').strip()
-        
-        # Validate required fields
-        if not all([title, artist, url, emotion, language]):
-            return jsonify({'success': False, 'error': 'All fields are required'})
-        
-        # Validate URL format
-        if not (url.startswith('http://') or url.startswith('https://')):
-            return jsonify({'success': False, 'error': 'Invalid URL format. Please include http:// or https://'})
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Check if song already exists
-        cursor.execute(
-            'SELECT id FROM songs WHERE title = %s AND artist = %s',
-            (title, artist)
-        )
-        existing = cursor.fetchone()
-        
-        if existing:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Song with this title and artist already exists'})
-        
-        # Insert new song
         song_id = str(uuid.uuid4())
         cursor.execute('''
             INSERT INTO songs (id, title, artist, url, emotion, language)
@@ -1207,241 +886,33 @@ def admin_add_song():
         ''', (song_id, title, artist, url, emotion, language))
         
         conn.commit()
+        return jsonify({"success": True, "song_id": song_id})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
         cursor.close()
         conn.close()
-        
-        return jsonify({'success': True, 'message': 'Song added successfully', 'song_id': song_id})
-        
-    except Exception as e:
-        print(f"Error adding song: {e}")
-        return jsonify({'success': False, 'error': 'Internal server error'})
 
 @app.route('/admin/delete_song/<song_id>', methods=['DELETE'])
 @login_required
-@admin_required
 def admin_delete_song(song_id):
-    """Delete a song from the database with enhanced error handling"""
+    if not session.get('is_admin', False):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Check if song exists
-        cursor.execute('SELECT id, title, artist FROM songs WHERE id = %s', (song_id,))
-        song = cursor.fetchone()
-        if not song:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Song not found'})
-        
-        # Check if song is referenced in user_history
-        cursor.execute('SELECT COUNT(*) FROM user_history WHERE song_id = %s', (song_id,))
-        history_count = cursor.fetchone()[0]
-        
-        if history_count > 0:
-            # Instead of preventing deletion, we'll set song_id to NULL in history
-            cursor.execute('UPDATE user_history SET song_id = NULL WHERE song_id = %s', (song_id,))
-        
-        # Delete the song
         cursor.execute('DELETE FROM songs WHERE id = %s', (song_id,))
         conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
         cursor.close()
         conn.close()
-        
-        return jsonify({'success': True, 'message': f'Song "{song[1]}" by {song[2]} deleted successfully'})
-        
-    except Exception as e:
-        print(f"Error deleting song: {e}")
-        return jsonify({'success': False, 'error': 'Internal server error'})
-    
-@app.route('/admin/edit_song/<song_id>', methods=['PUT'])
-@login_required
-@admin_required
-def admin_edit_song(song_id):
-    """Edit a song in the database"""
-    try:
-        data = request.get_json()
-        
-        title = data.get('title', '').strip()
-        artist = data.get('artist', '').strip()
-        url = data.get('url', '').strip()
-        emotion = data.get('emotion', '').strip()
-        language = data.get('language', '').strip()
-        
-        # Validate required fields
-        if not all([title, artist, url, emotion, language]):
-            return jsonify({'success': False, 'error': 'All fields are required'})
-        
-        # Validate URL format
-        if not (url.startswith('http://') or url.startswith('https://')):
-            return jsonify({'success': False, 'error': 'Invalid URL format. Please include http:// or https://'})
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Check if song exists
-        cursor.execute('SELECT id FROM songs WHERE id = %s', (song_id,))
-        song = cursor.fetchone()
-        if not song:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Song not found'})
-        
-        # Check if another song with same title and artist exists
-        cursor.execute(
-            'SELECT id FROM songs WHERE title = %s AND artist = %s AND id != %s',
-            (title, artist, song_id)
-        )
-        existing = cursor.fetchone()
-        
-        if existing:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Another song with this title and artist already exists'})
-        
-        # Update the song
-        cursor.execute('''
-            UPDATE songs 
-            SET title = %s, artist = %s, url = %s, emotion = %s, language = %s
-            WHERE id = %s
-        ''', (title, artist, url, emotion, language, song_id))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True, 'message': 'Song updated successfully'})
-        
-    except Exception as e:
-        print(f"Error updating song: {e}")
-        return jsonify({'success': False, 'error': 'Internal server error'})
-
-# New API routes for admin dashboard
-
-@app.route('/admin/api/emotion_analytics')
-@login_required
-@admin_required
-def emotion_analytics_api():
-    """API endpoint for emotion analytics data"""
-    try:
-        days = request.args.get('days', 30, type=int)
-        data = get_emotion_analytics(days)
-        return jsonify({'success': True, 'data': data})
-    except Exception as e:
-        print(f"Error getting emotion analytics: {e}")
-        return jsonify({'success': False, 'error': 'Internal server error'})
-
-@app.route('/admin/api/user_activity')
-@login_required
-@admin_required
-def user_activity_api():
-    """API endpoint for user activity data"""
-    try:
-        days = request.args.get('days', 30, type=int)
-        data = get_user_activity_data(days)
-        return jsonify({'success': True, 'data': data})
-    except Exception as e:
-        print(f"Error getting user activity: {e}")
-        return jsonify({'success': False, 'error': 'Internal server error'})
-
-@app.route('/admin/api/search_songs')
-@login_required
-@admin_required
-def search_songs_api():
-    """API endpoint for searching songs"""
-    try:
-        query = request.args.get('q', '').strip().lower()
-        emotion_filter = request.args.get('emotion', '').strip()
-        language_filter = request.args.get('language', '').strip()
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        sql = 'SELECT id, title, artist, url, emotion, language, created_at FROM songs WHERE 1=1'
-        params = []
-        
-        if query:
-            sql += ' AND (LOWER(title) LIKE %s OR LOWER(artist) LIKE %s OR LOWER(emotion) LIKE %s)'
-            params.extend([f'%{query}%', f'%{query}%', f'%{query}%'])
-        
-        if emotion_filter:
-            sql += ' AND emotion = %s'
-            params.append(emotion_filter)
-        
-        if language_filter:
-            sql += ' AND language = %s'
-            params.append(language_filter)
-        
-        sql += ' ORDER BY title'
-        
-        cursor.execute(sql, params)
-        songs = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        # Convert to list of dictionaries
-        songs_list = [{
-            'id': song[0],
-            'title': song[1],
-            'artist': song[2],
-            'url': song[3],
-            'emotion': song[4],
-            'language': song[5],
-            'created_at': song[6]
-        } for song in songs]
-        
-        return jsonify({'success': True, 'songs': songs_list})
-        
-    except Exception as e:
-        print(f"Error searching songs: {e}")
-        return jsonify({'success': False, 'error': 'Internal server error'})
-    
-@app.route('/admin/users')
-@login_required
-@admin_required
-def admin_users():
-    """Admin page for managing users"""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Get all users with their statistics
-        cursor.execute('''
-            SELECT u.id, u.name, u.username, u.email, u.created_at, u.is_admin,
-                   COUNT(DISTINCT uh.id) as activity_count,
-                   MAX(uh.timestamp) as last_activity
-            FROM users u
-            LEFT JOIN user_history uh ON u.id = uh.user_id
-            GROUP BY u.id, u.name, u.username, u.email, u.created_at, u.is_admin
-            ORDER BY u.created_at DESC
-        ''')
-        
-        users = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        users_data = [{
-            'id': user[0],
-            'name': user[1],
-            'username': user[2],
-            'email': user[3],
-            'created_at': user[4],
-            'is_admin': user[5],
-            'activity_count': user[6],
-            'last_activity': user[7]
-        } for user in users]
-        
-        return render_template('admin/users.html', users=users_data)
-        
-    except Exception as e:
-        print(f"Error in admin users: {e}")
-        return render_template('admin/users.html', users=[])
-
-@app.route('/admin/analytics')
-@login_required
-@admin_required
-def admin_analytics():
-    """Admin analytics page with detailed charts and insights"""
-    return render_template('admin/analytics.html', emotion_icons=EMOTION_ICONS)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
