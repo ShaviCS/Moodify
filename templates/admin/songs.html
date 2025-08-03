@@ -4,101 +4,359 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Song Management - Moodify Admin</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-songs.css') }}">
 </head>
 <body>
     <div class="admin-container">
-        <aside class="admin-sidebar">
-            <h2>Admin Panel</h2>
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <aside class="admin-sidebar" id="sidebar">
+            <h2><i class="fas fa-music"></i> Moodify</h2>
             <nav>
                 <ul>
-                    <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
-                    <li><a href="{{ url_for('admin_songs') }}" class="active">Song Management</a></li>
-                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                    <li><a href="#dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="#songs" class="active"><i class="fas fa-music"></i> Song Management</a></li>
+                    <li><a href="#analytics"><i class="fas fa-chart-bar"></i> Analytics</a></li>
+                    <li><a href="#users"><i class="fas fa-users"></i> Users</a></li>
+                    <li><a href="#settings"><i class="fas fa-cog"></i> Settings</a></li>
+                    <li><a href="#logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </nav>
         </aside>
         
         <main class="admin-content">
-            <h1>Song Management</h1>
+            <div class="page-header">
+                <h1><i class="fas fa-music"></i> Song Management</h1>
+                <p class="page-subtitle">Manage your music library and organize songs by emotions</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card total-songs">
+                    <div class="stat-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <div class="stat-number" id="totalSongs">247</div>
+                    <div class="stat-label">Total Songs</div>
+                </div>
+                <div class="stat-card total-emotions">
+                    <div class="stat-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="stat-number" id="totalEmotions">14</div>
+                    <div class="stat-label">Emotions</div>
+                </div>
+                <div class="stat-card total-languages">
+                    <div class="stat-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div class="stat-number" id="totalLanguages">6</div>
+                    <div class="stat-label">Languages</div>
+                </div>
+                <div class="stat-card recent-additions">
+                    <div class="stat-icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <div class="stat-number" id="recentAdditions">12</div>
+                    <div class="stat-label">This Week</div>
+                </div>
+            </div>
             
-            <div class="song-management">
+            <div class="content-grid">
                 <!-- Add New Song Form -->
-                <div class="add-song-form">
-                    <h3>Add New Song</h3>
+                <div class="add-song-card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <h3>Add New Song</h3>
+                    </div>
                     <form id="add-song-form">
                         <div class="form-group">
-                            <label for="emotion">Emotion</label>
-                            <select id="emotion" name="emotion" required>
-                                <option value="Angry">Angry</option>
-                                <option value="Disgust">Disgust</option>
-                                <option value="Fear">Fear</option>
-                                <option value="Happy">Happy</option>
-                                <option value="Neutral">Neutral</option>
-                                <option value="Sad">Sad</option>
-                                <option value="Surprise">Surprise</option>
-                                <option value="Pregnant">Pregnant</option>
-                                <option value="Depression">Depression</option>
-                                <option value="Trouble Sleeping">Trouble Sleeping</option>
-                                <option value="Travelling">Travelling</option>
-                                <option value="Stressed">Stressed</option>
-                                <option value="Lonely">Lonely</option>
-                                <option value="Excited">Excited</option>
-                            </select>
+                            <label for="emotion"><i class="fas fa-heart"></i> Emotion</label>
+                            <div class="select-wrapper">
+                                <select id="emotion" name="emotion" class="form-control" required>
+                                    <option value="">Select Emotion</option>
+                                    <option value="Happy">😊 Happy</option>
+                                    <option value="Sad">😢 Sad</option>
+                                    <option value="Angry">😠 Angry</option>
+                                    <option value="Fear">😨 Fear</option>
+                                    <option value="Surprise">😲 Surprise</option>
+                                    <option value="Disgust">🤢 Disgust</option>
+                                    <option value="Neutral">😐 Neutral</option>
+                                    <option value="Pregnant">🤰 Pregnant</option>
+                                    <option value="Depression">😔 Depression</option>
+                                    <option value="Trouble Sleeping">😴 Trouble Sleeping</option>
+                                    <option value="Travelling">✈️ Travelling</option>
+                                    <option value="Stressed">😰 Stressed</option>
+                                    <option value="Lonely">😞 Lonely</option>
+                                    <option value="Excited">🤩 Excited</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="language">Language</label>
-                            <select id="language" name="language" required>
-                                <option value="English">English</option>
-                                <option value="Sinhala">Sinhala</option>
-                                <option value="Hindi">Hindi</option>
-                                <option value="Tamil">Tamil</option>
-                                <option value="Korean">Korean</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            <label for="language"><i class="fas fa-globe"></i> Language</label>
+                            <div class="select-wrapper">
+                                <select id="language" name="language" class="form-control" required>
+                                    <option value="">Select Language</option>
+                                    <option value="English">🇺🇸 English</option>
+                                    <option value="Sinhala">🇱🇰 Sinhala</option>
+                                    <option value="Hindi">🇮🇳 Hindi</option>
+                                    <option value="Tamil">🇮🇳 Tamil</option>
+                                    <option value="Korean">🇰🇷 Korean</option>
+                                    <option value="Other">🌍 Other</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="title">Title</label>
-                            <input type="text" id="title" name="title" required>
+                            <label for="title"><i class="fas fa-music"></i> Song Title</label>
+                            <input type="text" id="title" name="title" class="form-control" placeholder="Enter song title" required>
                         </div>
                         <div class="form-group">
-                            <label for="artist">Artist</label>
-                            <input type="text" id="artist" name="artist" required>
+                            <label for="artist"><i class="fas fa-user"></i> Artist</label>
+                            <input type="text" id="artist" name="artist" class="form-control" placeholder="Enter artist name" required>
                         </div>
                         <div class="form-group">
-                            <label for="url">URL (Spotify or YouTube)</label>
-                            <input type="url" id="url" name="url" required>
+                            <label for="url"><i class="fas fa-link"></i> URL (Spotify or YouTube)</label>
+                            <div class="url-input-wrapper">
+                                <input type="url" id="url" name="url" class="form-control" placeholder="https://..." required>
+                            </div>
                         </div>
-                        <button type="submit" class="btn-primary">Add Song</button>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-plus-circle"></i>
+                            Add Song
+                        </button>
                     </form>
                 </div>
                 
-                <!-- Songs by Emotion -->
-                <div class="songs-by-emotion">
-                    {% for emotion, songs in songs_by_emotion.items() %}
-                    <div class="emotion-section">
-                        <h3>{{ emotion }}</h3>
-                        <div class="song-list">
-                            {% for song in songs %}
-                            <div class="song-item" data-song-id="{{ song.id }}">
-                                <div class="song-info">
-                                    <h4>{{ song.title }}</h4>
-                                    <p>{{ song.artist }}</p>
-                                    <p>Language: {{ song.language }}</p>
-                                    <a href="{{ song.url }}" target="_blank">{{ song.url }}</a>
-                                </div>
-                                <button class="btn-danger delete-song" data-song-id="{{ song.id }}">Delete</button>
+                <!-- Songs Display -->
+                <div class="songs-container">
+                    <div class="songs-header">
+                        <div class="songs-header-left">
+                            <div class="card-icon">
+                                <i class="fas fa-list"></i>
                             </div>
-                            {% endfor %}
+                            <h2>Song Library</h2>
+                        </div>
+                        <div class="search-box">
+                            <input type="text" id="searchSongs" placeholder="Search songs, artists, or emotions...">
+                            <i class="fas fa-search"></i>
                         </div>
                     </div>
-                    {% endfor %}
+                    <div class="songs-content" id="songsContent">
+                        <!-- Happy Songs -->
+                        <div class="emotion-section" data-emotion="Happy">
+                            <div class="emotion-header" onclick="toggleEmotion(this)">
+                                <div class="emotion-header-left">
+                                    <div class="emotion-icon">
+                                        <i class="fas fa-smile"></i>
+                                    </div>
+                                    <h3>Happy</h3>
+                                </div>
+                                <div class="song-count">
+                                    <i class="fas fa-music"></i>
+                                    <span>24</span>
+                                    <i class="fas fa-chevron-down toggle-icon"></i>
+                                </div>
+                            </div>
+                            <div class="song-list">
+                                <div class="song-item" data-song-id="1">
+                                    <div class="song-info">
+                                        <h4 class="song-title">
+                                            <i class="fas fa-play-circle"></i>
+                                            Uptown Funk
+                                        </h4>
+                                        <p class="song-artist">Mark Ronson ft. Bruno Mars</p>
+                                        <div class="song-meta">
+                                            <span class="language-tag">English</span>
+                                            <a href="https://open.spotify.com/track/32OlwWuMpZ6b0aN2RZOeMS" target="_blank" class="song-url">
+                                                <i class="fab fa-spotify"></i>
+                                                Open in Spotify
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="song-actions">
+                                        <button class="btn-danger delete-song" data-song-id="1">
+                                            <i class="fas fa-trash"></i>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="song-item" data-song-id="2">
+                                    <div class="song-info">
+                                        <h4 class="song-title">
+                                            <i class="fas fa-play-circle"></i>
+                                            Happy
+                                        </h4>
+                                        <p class="song-artist">Pharrell Williams</p>
+                                        <div class="song-meta">
+                                            <span class="language-tag">English</span>
+                                            <a href="https://www.youtube.com/watch?v=ZbZSe6N_BXs" target="_blank" class="song-url">
+                                                <i class="fab fa-youtube"></i>
+                                                Watch on YouTube
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="song-actions">
+                                        <button class="btn-danger delete-song" data-song-id="2">
+                                            <i class="fas fa-trash"></i>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="song-item" data-song-id="3">
+                                    <div class="song-info">
+                                        <h4 class="song-title">
+                                            <i class="fas fa-play-circle"></i>
+                                            සුරංගනා වලා
+                                        </h4>
+                                        <p class="song-artist">Nanda Malini</p>
+                                        <div class="song-meta">
+                                            <span class="language-tag">Sinhala</span>
+                                            <a href="https://www.youtube.com/watch?v=example" target="_blank" class="song-url">
+                                                <i class="fab fa-youtube"></i>
+                                                Watch on YouTube
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="song-actions">
+                                        <button class="btn-danger delete-song" data-song-id="3">
+                                            <i class="fas fa-trash"></i>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sad Songs -->
+                        <div class="emotion-section collapsed" data-emotion="Sad">
+                            <div class="emotion-header" onclick="toggleEmotion(this)">
+                                <div class="emotion-header-left">
+                                    <div class="emotion-icon">
+                                        <i class="fas fa-sad-tear"></i>
+                                    </div>
+                                    <h3>Sad</h3>
+                                </div>
+                                <div class="song-count">
+                                    <i class="fas fa-music"></i>
+                                    <span>18</span>
+                                    <i class="fas fa-chevron-down toggle-icon"></i>
+                                </div>
+                            </div>
+                            <div class="song-list">
+                                <div class="song-item" data-song-id="4">
+                                    <div class="song-info">
+                                        <h4 class="song-title">
+                                            <i class="fas fa-play-circle"></i>
+                                            Someone Like You
+                                        </h4>
+                                        <p class="song-artist">Adele</p>
+                                        <div class="song-meta">
+                                            <span class="language-tag">English</span>
+                                            <a href="https://open.spotify.com/track/example" target="_blank" class="song-url">
+                                                <i class="fab fa-spotify"></i>
+                                                Open in Spotify
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="song-actions">
+                                        <button class="btn-danger delete-song" data-song-id="4">
+                                            <i class="fas fa-trash"></i>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Excited Songs -->
+                        <div class="emotion-section collapsed" data-emotion="Excited">
+                            <div class="emotion-header" onclick="toggleEmotion(this)">
+                                <div class="emotion-header-left">
+                                    <div class="emotion-icon">
+                                        <i class="fas fa-star"></i>
+                                    </div>
+                                    <h3>Excited</h3>
+                                </div>
+                                <div class="song-count">
+                                    <i class="fas fa-music"></i>
+                                    <span>15</span>
+                                    <i class="fas fa-chevron-down toggle-icon"></i>
+                                </div>
+                            </div>
+                            <div class="song-list">
+                                <div class="song-item" data-song-id="5">
+                                    <div class="song-info">
+                                        <h4 class="song-title">
+                                            <i class="fas fa-play-circle"></i>
+                                            Dynamite
+                                        </h4>
+                                        <p class="song-artist">BTS</p>
+                                        <div class="song-meta">
+                                            <span class="language-tag">Korean</span>
+                                            <a href="https://www.youtube.com/watch?v=gdZLi9oWNZg" target="_blank" class="song-url">
+                                                <i class="fab fa-youtube"></i>
+                                                Watch on YouTube
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="song-actions">
+                                        <button class="btn-danger delete-song" data-song-id="5">
+                                            <i class="fas fa-trash"></i>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Empty State for emotions with no songs -->
+                        <div class="emotion-section collapsed" data-emotion="Fear">
+                            <div class="emotion-header" onclick="toggleEmotion(this)">
+                                <div class="emotion-header-left">
+                                    <div class="emotion-icon">
+                                        <i class="fas fa-ghost"></i>
+                                    </div>
+                                    <h3>Fear</h3>
+                                </div>
+                                <div class="song-count">
+                                    <i class="fas fa-music"></i>
+                                    <span>0</span>
+                                    <i class="fas fa-chevron-down toggle-icon"></i>
+                                </div>
+                            </div>
+                            <div class="song-list">
+                                <div class="empty-state">
+                                    <i class="fas fa-music"></i>
+                                    <h4>No Songs Yet</h4>
+                                    <p>Add some songs to get started with this emotion category.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
     
+    <!-- Notification Container -->
+    <div id="notification" class="notification">
+        <div class="notification-content">
+            <div class="notification-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="notification-text">
+                <h5>Success!</h5>
+                <p>Song added successfully.</p>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 </body>
 </html>

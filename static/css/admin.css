@@ -24,7 +24,7 @@
 }
 
 .logo-container .logo {
-    height: 40px;
+    height: 80px;
 }
 
 .admin-logo i {
@@ -36,7 +36,7 @@
 .admin-logo h2 {
     margin: 0;
     font-size: 1.5rem;
-    font-weight: 800;
+    font-weight: 600;
 }
 
 .admin-sidebar nav {
