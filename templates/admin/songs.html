@@ -16,53 +16,79 @@
         </button>
 
         <aside class="admin-sidebar" id="sidebar">
-            <h2><i class="fas fa-music"></i> Moodify</h2>
+            <div class="admin-logo">
+                <div class="logo-container">
+                    <i class="fas fa-music logo-icon"></i>
+                </div>
+                <h2>Moodify Admin</h2>
+            </div>
             <nav>
                 <ul>
-                    <li><a href="#dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="#dashboard"><i class="fas fa-chart-line"></i> Dashboard</a></li>
                     <li><a href="#songs" class="active"><i class="fas fa-music"></i> Song Management</a></li>
-                    <li><a href="#analytics"><i class="fas fa-chart-bar"></i> Analytics</a></li>
-                    <li><a href="#users"><i class="fas fa-users"></i> Users</a></li>
-                    <li><a href="#settings"><i class="fas fa-cog"></i> Settings</a></li>
                     <li><a href="#logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </nav>
         </aside>
         
         <main class="admin-content">
-            <div class="page-header">
+            <div class="dashboard-header">
                 <h1><i class="fas fa-music"></i> Song Management</h1>
-                <p class="page-subtitle">Manage your music library and organize songs by emotions</p>
+                <div class="welcome-card">
+                    <p>Manage your music library and organize songs by emotions</p>
+                    <span class="admin-badge">Administrator</span>
+                </div>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card total-songs">
-                    <div class="stat-icon">
+            <!-- Metrics Grid - matching dashboard style -->
+            <div class="metrics-grid">
+                <div class="metric-card songs">
+                    <div class="metric-icon">
                         <i class="fas fa-music"></i>
                     </div>
-                    <div class="stat-number" id="totalSongs">247</div>
-                    <div class="stat-label">Total Songs</div>
+                    <div class="metric-content">
+                        <h3>Total Songs</h3>
+                        <p class="metric-number" id="totalSongs">247</p>
+                        <span class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i> +8% this week
+                        </span>
+                    </div>
                 </div>
-                <div class="stat-card total-emotions">
-                    <div class="stat-icon">
+                <div class="metric-card emotions">
+                    <div class="metric-icon">
                         <i class="fas fa-heart"></i>
                     </div>
-                    <div class="stat-number" id="totalEmotions">14</div>
-                    <div class="stat-label">Emotions</div>
+                    <div class="metric-content">
+                        <h3>Emotions</h3>
+                        <p class="metric-number" id="totalEmotions">14</p>
+                        <span class="metric-change neutral">
+                            <i class="fas fa-minus"></i> Categories
+                        </span>
+                    </div>
                 </div>
-                <div class="stat-card total-languages">
-                    <div class="stat-icon">
+                <div class="metric-card languages">
+                    <div class="metric-icon">
                         <i class="fas fa-globe"></i>
                     </div>
-                    <div class="stat-number" id="totalLanguages">6</div>
-                    <div class="stat-label">Languages</div>
+                    <div class="metric-content">
+                        <h3>Languages</h3>
+                        <p class="metric-number" id="totalLanguages">6</p>
+                        <span class="metric-change neutral">
+                            <i class="fas fa-minus"></i> Supported
+                        </span>
+                    </div>
                 </div>
-                <div class="stat-card recent-additions">
-                    <div class="stat-icon">
+                <div class="metric-card recent">
+                    <div class="metric-icon">
                         <i class="fas fa-plus-circle"></i>
                     </div>
-                    <div class="stat-number" id="recentAdditions">12</div>
-                    <div class="stat-label">This Week</div>
+                    <div class="metric-content">
+                        <h3>This Week</h3>
+                        <p class="metric-number" id="recentAdditions">12</p>
+                        <span class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i> New additions
+                        </span>
+                    </div>
                 </div>
             </div>
             
