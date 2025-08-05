@@ -168,6 +168,9 @@
                         <button id="captureImage" class="action-button" disabled>
                             <i class="fas fa-camera-retro"></i> Capture Image
                         </button>
+                        <button id="tryAgainCamera" class="action-button try-again-button" style="display: none;">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
                     </div>
                 </div>
                 
@@ -212,9 +215,14 @@
                     
                     <div class="preview-container" id="previewContainer" style="display: none;">
                         <img id="imagePreview" src="#" alt="Preview">
-                        <button id="detectEmotionBtn" class="action-button" style="display: none;">
-                            <i class="fas fa-search"></i> Detect Emotion
-                        </button>
+                        <div class="upload-controls">
+                            <button id="detectEmotionBtn" class="action-button" style="display: none;">
+                                <i class="fas fa-search"></i> Detect Emotion
+                            </button>
+                            <button id="tryAgainUpload" class="action-button try-again-button" style="display: none;">
+                                <i class="fas fa-redo"></i> Try Again
+                            </button>
+                        </div>
                     </div>
                 </div>
                 

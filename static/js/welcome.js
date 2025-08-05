@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Webcam functionality for detect section
     const startCameraBtn = document.getElementById('startCamera');
     const captureImageBtn = document.getElementById('captureImage');
+    const tryAgainCameraBtn = document.getElementById('tryAgainCamera');
     const videoElement = document.getElementById('video');
     const cameraPlaceholder = document.querySelector('.camera-placeholder');
     const detectedEmotion = document.getElementById('detectedEmotion');
@@ -81,6 +82,52 @@ document.addEventListener('DOMContentLoaded', function() {
     const getRecommendationsBtn = document.getElementById('getRecommendations');
 
     let stream = null;
+
+    // Function to reset camera section
+    function resetCameraSection() {
+        // Stop camera stream if running
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        
+        // Hide video and show placeholder
+        videoElement.style.display = 'none';
+        if (cameraPlaceholder) {
+            cameraPlaceholder.style.display = 'block';
+        }
+        
+        // Reset buttons
+        startCameraBtn.innerHTML = '<i class="fas fa-camera"></i> Start Camera';
+        startCameraBtn.disabled = false;
+        captureImageBtn.disabled = true;
+        tryAgainCameraBtn.style.display = 'none';
+        
+        // Reset emotion result section
+        const emotionPlaceholder = document.querySelector('.emotion-placeholder');
+        if (emotionPlaceholder) {
+            emotionPlaceholder.innerHTML = '<i class="fas fa-dizzy"></i><p>Your detected emotion will appear here</p>';
+            emotionPlaceholder.style.display = 'block';
+        }
+        
+        if (detectedEmotion) {
+            detectedEmotion.style.display = 'none';
+        }
+        
+        if (getRecommendationsBtn) {
+            getRecommendationsBtn.style.display = 'none';
+        }
+        
+        // Clear session storage
+        sessionStorage.removeItem('capturedImage');
+        sessionStorage.removeItem('detectedEmotion');
+        sessionStorage.removeItem('recommendations');
+    }
+
+    // Try Again button for camera section
+    if (tryAgainCameraBtn) {
+        tryAgainCameraBtn.addEventListener('click', resetCameraSection);
+    }
 
     if (startCameraBtn && videoElement) {
         startCameraBtn.addEventListener('click', async function() {
@@ -199,6 +246,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         getRecommendationsBtn.style.display = 'inline-flex';
                         getRecommendationsBtn.href = `/recommendations?emotion=${encodeURIComponent(data.dominant_emotion)}`;
                     }
+                    
+                    // Show try again button
+                    if (tryAgainCameraBtn) {
+                        tryAgainCameraBtn.style.display = 'inline-flex';
+                    }
                 }
             } catch (error) {
                 console.error('Error processing image:', error);
@@ -227,10 +279,60 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewContainer = document.getElementById('previewContainer');
     const imagePreview = document.getElementById('imagePreview');
     const detectEmotionBtn = document.getElementById('detectEmotionBtn');
+    const tryAgainUploadBtn = document.getElementById('tryAgainUpload');
     const uploadEmotionPlaceholder = document.getElementById('uploadEmotionPlaceholder');
     const uploadDetectedEmotion = document.getElementById('uploadDetectedEmotion');
     const uploadEmotionText = document.getElementById('uploadEmotionText');
     const uploadGetRecommendationsBtn = document.getElementById('uploadGetRecommendations');
+
+    // Function to reset upload section
+    function resetUploadSection() {
+        // Reset file input
+        if (imageUpload) {
+            imageUpload.value = '';
+        }
+        
+        // Show upload area and hide preview
+        if (uploadArea) {
+            uploadArea.style.display = 'block';
+        }
+        if (previewContainer) {
+            previewContainer.style.display = 'none';
+        }
+        
+        // Reset image preview
+        if (imagePreview) {
+            imagePreview.src = '#';
+        }
+        
+        // Reset buttons
+        if (detectEmotionBtn) {
+            detectEmotionBtn.style.display = 'none';
+        }
+        if (tryAgainUploadBtn) {
+            tryAgainUploadBtn.style.display = 'none';
+        }
+        
+        // Reset emotion result section
+        if (uploadEmotionPlaceholder) {
+            uploadEmotionPlaceholder.innerHTML = '<i class="fas fa-dizzy"></i><p>Your detected emotion will appear here</p>';
+            uploadEmotionPlaceholder.style.display = 'block';
+        }
+        
+        if (uploadDetectedEmotion) {
+            uploadDetectedEmotion.style.display = 'none';
+        }
+        
+        // Clear session storage
+        sessionStorage.removeItem('capturedImage');
+        sessionStorage.removeItem('detectedEmotion');
+        sessionStorage.removeItem('recommendations');
+    }
+
+    // Try Again button for upload section
+    if (tryAgainUploadBtn) {
+        tryAgainUploadBtn.addEventListener('click', resetUploadSection);
+    }
 
     if (imageUpload) {
         imageUpload.addEventListener('change', function() {
@@ -249,6 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     uploadArea.style.display = 'none';
                     previewContainer.style.display = 'block';
                     detectEmotionBtn.style.display = 'inline-flex';
+                    tryAgainUploadBtn.style.display = 'inline-flex';
                     uploadEmotionPlaceholder.style.display = 'block';
                     uploadDetectedEmotion.style.display = 'none';
                 };
@@ -589,7 +692,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return `<a href="${url}" target="_blank" class="song-link">Open in new tab</a>`;
     }
 
-    // Add CSS for language filtering features
+    // Add CSS for language filtering features and try again buttons
     const style = document.createElement('style');
     style.textContent = `
         .loading-songs {
@@ -657,6 +760,65 @@ document.addEventListener('DOMContentLoaded', function() {
         .song-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .try-again-button {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        
+        .try-again-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+            background: linear-gradient(135deg, #ff5252, #e53935);
+        }
+        
+        .try-again-button:active {
+            transform: translateY(0);
+        }
+        
+        .try-again-button i {
+            font-size: 16px;
+        }
+        
+        .upload-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .camera-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .camera-controls, .upload-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .try-again-button {
+                margin-left: 0;
+                margin-top: 10px;
+            }
         }
     `;
     document.head.appendChild(style);
