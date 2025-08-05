@@ -1060,37 +1060,131 @@ def admin_songs():
 @app.route('/admin/add_song', methods=['POST'])
 @login_required
 def admin_add_song():
-    if not session.get('is_admin', False):
-        return jsonify({"success": False, "error": "Unauthorized"}), 403
-    
-    data = request.json
-    title = data.get('title')
-    artist = data.get('artist')
-    url = data.get('url')
-    emotion = data.get('emotion')
-    language = data.get('language')
-    
-    if not all([title, artist, url, emotion, language]):
-        return jsonify({"success": False, "error": "All fields are required"}), 400
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
     try:
-        song_id = str(uuid.uuid4())
-        cursor.execute('''
-            INSERT INTO songs (id, title, artist, url, emotion, language)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        ''', (song_id, title, artist, url, emotion, language))
+        # Check admin authorization
+        if not session.get('is_admin', False):
+            return jsonify({"success": False, "error": "Unauthorized"}), 403
         
-        conn.commit()
-        return jsonify({"success": True, "song_id": song_id})
+        # Check if request contains JSON data
+        if not request.is_json:
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        
+        # Check if data was parsed successfully
+        if data is None:
+            return jsonify({"success": False, "error": "Invalid JSON data"}), 400
+        
+        # Extract and validate data
+        title = data.get('title', '').strip()
+        artist = data.get('artist', '').strip()
+        url = data.get('url', '').strip()
+        emotion = data.get('emotion', '').strip()
+        language = data.get('language', '').strip()
+        
+        # Validate all fields are present and not empty
+        if not all([title, artist, url, emotion, language]):
+            missing_fields = []
+            if not title: missing_fields.append('title')
+            if not artist: missing_fields.append('artist')
+            if not url: missing_fields.append('url')
+            if not emotion: missing_fields.append('emotion')
+            if not language: missing_fields.append('language')
+            
+            return jsonify({
+                "success": False, 
+                "error": f"Missing required fields: {', '.join(missing_fields)}"
+            }), 400
+        
+        # Validate URL format (basic check)
+        if not (url.startswith('http://') or url.startswith('https://')):
+            return jsonify({"success": False, "error": "Invalid URL format"}), 400
+        
+        # Validate emotion is from allowed list
+        allowed_emotions = [
+            'Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise',
+            'Pregnant', 'Depression', 'Trouble Sleeping', 'Travelling', 
+            'Stressed', 'Lonely', 'Excited'
+        ]
+        if emotion not in allowed_emotions:
+            return jsonify({"success": False, "error": "Invalid emotion"}), 400
+        
+        # Validate language is from allowed list
+        allowed_languages = ['English', 'Sinhala', 'Hindi', 'Tamil', 'Korean', 'Other']
+        if language not in allowed_languages:
+            return jsonify({"success": False, "error": "Invalid language"}), 400
+        
+        # Database operations
+        conn = None
+        cursor = None
+        
+        try:
+            conn = get_db_connection()
+            if conn is None:
+                return jsonify({"success": False, "error": "Database connection failed"}), 500
+            
+            cursor = conn.cursor()
+            
+            # Check if song already exists (optional - prevent duplicates)
+            cursor.execute('''
+                SELECT COUNT(*) FROM songs 
+                WHERE title = %s AND artist = %s AND url = %s
+            ''', (title, artist, url))
+            
+            if cursor.fetchone()[0] > 0:
+                return jsonify({
+                    "success": False, 
+                    "error": "Song with same title, artist, and URL already exists"
+                }), 400
+            
+            # Generate unique ID
+            song_id = str(uuid.uuid4())
+            
+            # Insert new song
+            cursor.execute('''
+                INSERT INTO songs (id, title, artist, url, emotion, language)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            ''', (song_id, title, artist, url, emotion, language))
+            
+            # Check if insertion was successful
+            if cursor.rowcount == 0:
+                return jsonify({"success": False, "error": "Failed to insert song"}), 500
+            
+            conn.commit()
+            
+            return jsonify({
+                "success": True, 
+                "song_id": song_id,
+                "message": "Song added successfully"
+            }), 201
+            
+        except Exception as db_error:
+            if conn:
+                conn.rollback()
+            
+            # Log the error for debugging
+            print(f"Database error in admin_add_song: {str(db_error)}")
+            
+            # Check for specific database errors
+            error_message = str(db_error)
+            if "Duplicate entry" in error_message:
+                return jsonify({"success": False, "error": "Song already exists"}), 400
+            elif "doesn't exist" in error_message:
+                return jsonify({"success": False, "error": "Database table not found"}), 500
+            else:
+                return jsonify({"success": False, "error": f"Database error: {error_message}"}), 500
+                
+        finally:
+            # Clean up database connections
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+                
     except Exception as e:
-        conn.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
+        # Log the error for debugging
+        print(f"General error in admin_add_song: {str(e)}")
+        return jsonify({"success": False, "error": f"Server error: {str(e)}"}), 500
 
 @app.route('/admin/delete_song/<song_id>', methods=['DELETE'])
 @login_required
