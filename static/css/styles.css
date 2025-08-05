@@ -482,11 +482,16 @@ a:hover {
     margin-bottom: 1rem;
 }
 
+.emotion-placeholder p {
+    font-size: 1.1rem;
+}
+
 /* Upload Image Section */
 .upload-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
+    align-items: start;
 }
 
 .upload-container {
@@ -494,12 +499,13 @@ a:hover {
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     padding: 1.5rem;
+    text-align: center;
 }
 
 .upload-area {
     width: 100%;
     aspect-ratio: 4/3;
-    border: 2px dashed var(--primary-color);
+    border: 3px dashed var(--primary-color);
     border-radius: var(--border-radius);
     display: flex;
     flex-direction: column;
@@ -519,6 +525,7 @@ a:hover {
     font-size: 3rem;
     color: var(--primary-color);
     margin-bottom: 1rem;
+    display: block;
 }
 
 .upload-button {
@@ -534,6 +541,8 @@ a:hover {
 
 .upload-button:hover {
     background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
 }
 
 .preview-container {
@@ -543,6 +552,7 @@ a:hover {
     overflow: hidden;
     position: relative;
     margin-bottom: 1rem;
+    text-align: center;
 }
 
 /* Upload Section Styles */
@@ -588,20 +598,51 @@ a:hover {
     margin-bottom: 1rem;
 }
 
-#detectEmotionBtn {
-    margin-top: 1rem;
-    width: 100%;
+.upload-controls {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
-.emotion-placeholder {
-    text-align: center;
-    padding: 2rem;
-    color: #666;
+.try-again-button {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
 }
 
-.emotion-placeholder i {
-    font-size: 2rem;
-    margin-bottom: 1rem;
+.try-again-button:hover {
+    background: linear-gradient(135deg, #ff5252, #e53935);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+}
+
+#uploadDetectedEmotion {
+    color: #fff;
+}
+
+#uploadDetectedEmotion h3 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+}
+
+#uploadEmotionText {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.loading-state {
+    color: #667eea;
+}
+
+.loading-state i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.error-state {
+    color: #ff6b6b;
 }
 
 /* Emotion specific colors */
