@@ -285,10 +285,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadEmotionText = document.getElementById('uploadEmotionText');
     const uploadGetRecommendationsBtn = document.getElementById('uploadGetRecommendations');
 
-    // Function to reset upload section - FIXED VERSION
+    // Function to reset upload section
     function resetUploadSection() {
-        console.log('Resetting upload section...'); // Debug log
-        
         // Reset file input
         if (imageUpload) {
             imageUpload.value = '';
@@ -307,11 +305,9 @@ document.addEventListener('DOMContentLoaded', function() {
             imagePreview.src = '#';
         }
         
-        // Reset buttons - Make sure they're properly hidden/shown
+        // Reset buttons
         if (detectEmotionBtn) {
             detectEmotionBtn.style.display = 'none';
-            detectEmotionBtn.disabled = false;
-            detectEmotionBtn.innerHTML = '<i class="fas fa-search"></i> Detect Emotion';
         }
         if (tryAgainUploadBtn) {
             tryAgainUploadBtn.style.display = 'none';
@@ -333,14 +329,9 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionStorage.removeItem('recommendations');
     }
 
-    // Try Again button for upload section - FIXED EVENT LISTENER
+    // Try Again button for upload section
     if (tryAgainUploadBtn) {
-        tryAgainUploadBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Try Again button clicked'); // Debug log
-            resetUploadSection();
-        });
+        tryAgainUploadBtn.addEventListener('click', resetUploadSection);
     }
 
     if (imageUpload) {
@@ -359,23 +350,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     imagePreview.src = e.target.result;
                     uploadArea.style.display = 'none';
                     previewContainer.style.display = 'block';
-                    
-                    // FIXED: Show both buttons when image is loaded
-                    if (detectEmotionBtn) {
-                        detectEmotionBtn.style.display = 'inline-flex';
-                    }
-                    if (tryAgainUploadBtn) {
-                        tryAgainUploadBtn.style.display = 'inline-flex';
-                    }
-                    
-                    // Reset emotion results when new image is loaded
-                    if (uploadEmotionPlaceholder) {
-                        uploadEmotionPlaceholder.innerHTML = '<i class="fas fa-dizzy"></i><p>Your detected emotion will appear here</p>';
-                        uploadEmotionPlaceholder.style.display = 'block';
-                    }
-                    if (uploadDetectedEmotion) {
-                        uploadDetectedEmotion.style.display = 'none';
-                    }
+                    detectEmotionBtn.style.display = 'inline-flex';
+                    tryAgainUploadBtn.style.display = 'inline-flex';
+                    uploadEmotionPlaceholder.style.display = 'block';
+                    uploadDetectedEmotion.style.display = 'none';
                 };
                 
                 reader.onerror = function() {
@@ -785,42 +763,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         .try-again-button {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a52) !important;
-            color: white !important;
-            border: none !important;
-            padding: 12px 24px !important;
-            border-radius: 25px !important;
-            font-size: 14px !important;
-            font-weight: 600 !important;
-            cursor: pointer !important;
-            transition: all 0.3s ease !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 8px !important;
-            text-decoration: none !important;
-            margin-left: 10px !important;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            margin-left: 10px;
         }
         
         .try-again-button:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3) !important;
-            background: linear-gradient(135deg, #ff5252, #e53935) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+            background: linear-gradient(135deg, #ff5252, #e53935);
         }
         
         .try-again-button:active {
-            transform: translateY(0) !important;
+            transform: translateY(0);
         }
         
         .try-again-button i {
-            font-size: 16px !important;
+            font-size: 16px;
         }
         
         .upload-controls {
-            display: flex !important;
-            gap: 10px !important;
-            justify-content: center !important;
-            margin-top: 15px !important;
-            flex-wrap: wrap !important;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
         }
         
         .camera-controls {
@@ -833,47 +811,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         @media (max-width: 768px) {
             .camera-controls, .upload-controls {
-                flex-direction: column !important;
-                align-items: center !important;
+                flex-direction: column;
+                align-items: center;
             }
             
             .try-again-button {
-                margin-left: 0 !important;
-                margin-top: 10px !important;
+                margin-left: 0;
+                margin-top: 10px;
             }
         }
     `;
     document.head.appendChild(style);
-
-    // Initialize upload section in proper state on page load
-    if (uploadArea && previewContainer) {
-        // Ensure upload section starts in the correct state
-        uploadArea.style.display = 'block';
-        previewContainer.style.display = 'none';
-        
-        if (detectEmotionBtn) {
-            detectEmotionBtn.style.display = 'none';
-        }
-        if (tryAgainUploadBtn) {
-            tryAgainUploadBtn.style.display = 'none';
-        }
-        if (uploadEmotionPlaceholder) {
-            uploadEmotionPlaceholder.style.display = 'block';
-        }
-        if (uploadDetectedEmotion) {
-            uploadDetectedEmotion.style.display = 'none';
-        }
-    }
-
-    // Additional debugging for try again button
-    console.log('Try Again Upload Button:', tryAgainUploadBtn);
-    console.log('Upload controls container:', document.querySelector('.upload-controls'));
-    
-    // Force visibility check after DOM is fully loaded
-    setTimeout(() => {
-        if (tryAgainUploadBtn) {
-            console.log('Try Again button computed style:', window.getComputedStyle(tryAgainUploadBtn).display);
-            console.log('Try Again button inline style:', tryAgainUploadBtn.style.display);
-        }
-    }, 100);
 });
