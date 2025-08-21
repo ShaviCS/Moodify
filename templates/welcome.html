@@ -50,11 +50,20 @@
                     <div class="user-dropdown" id="userDropdown">
                         <ul>
                             {% if session.get('is_guest') %}
-                                <li><a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> Login / Sign Up</a></li>
+                                <li class="guest-header">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>Guest Mode Active</span>
+                                </li>
+                                <li class="dropdown-divider"></li>
+                                <li><a href="{{ url_for('signup') }}"><i class="fas fa-user-plus"></i> Create Account</a></li>
+                                <li><a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> Login</a></li>
                                 <li class="dropdown-divider"></li>
                             {% else %}
                                 <li><a href="{{ url_for('profile') }}"><i class="fas fa-user"></i> Profile</a></li>
                                 <li><a href="{{ url_for('settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
+                                {% if session.get('is_admin', False) %}
+                                    <li><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-cog"></i> Admin Panel</a></li>
+                                {% endif %}
                                 <li class="dropdown-divider"></li>
                             {% endif %}
                             <li><a href="{{ url_for('logout') }}" id="logoutBtn">
@@ -69,11 +78,19 @@
     </header>
 
     {% if session.get('is_guest') %}
-    <div class="guest-notification">
+    <div class="guest-notification enhanced">
         <div class="guest-notification-content">
-            <i class="fas fa-info-circle"></i>
-            <span>You're using Moodify in guest mode. Your activity won't be saved.</span>
-            <a href="{{ url_for('login') }}" class="login-prompt">Login to save your preferences</a>
+            <div class="guest-info">
+                <i class="fas fa-user-secret"></i>
+                <div class="guest-text">
+                    <h4>Welcome to Moodify!</h4>
+                    <p>You're exploring as a guest. Your activity won't be saved, but you can enjoy all features.</p>
+                </div>
+            </div>
+            <div class="guest-actions">
+                <a href="{{ url_for('login') }}" class="login-btn">Login</a>
+                <a href="{{ url_for('signup') }}" class="signup-btn">Sign Up</a>
+            </div>
         </div>
     </div>
     {% endif %}

@@ -437,47 +437,6 @@
     background-color: #4caf50;
 }
 
-.guest-mode-section {
-    text-align: center;
-    margin: 20px 0;
-}
-
-.guest-button {
-    display: inline-block;
-    width: 100%;
-    padding: 12px 20px;
-    background: linear-gradient(135deg, #6c63ff, #5a52d5);
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    border: none;
-    margin-bottom: 10px;
-}
-
-.guest-button:hover {
-    background: linear-gradient(135deg, #5a52d5, #4942c1);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
-    color: white;
-    text-decoration: none;
-}
-
-.guest-button i {
-    margin-right: 8px;
-}
-
-.guest-note {
-    color: #666;
-    margin: 0;
-    font-size: 0.85em;
-}
-
-.guest-note small {
-    color: #888;
-}
-
 /* Animation for inputs */
 @keyframes focusIn {
     0% { transform: scale(0.95); opacity: 0.8; }

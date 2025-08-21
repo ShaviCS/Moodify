@@ -147,14 +147,11 @@ except Exception as e:
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Allow guest access to certain routes
-        guest_allowed_routes = ['welcome', 'process_emotion', 'get_songs']
-        
+        # If no session exists at all, create guest session
         if 'user_id' not in session and 'is_guest' not in session:
-            # If trying to access a guest-allowed route, redirect to login with guest option
-            if f.__name__ in guest_allowed_routes:
-                return redirect(url_for('login'))
-            return redirect(url_for('login'))
+            session['is_guest'] = True
+            session['name'] = 'Guest User'
+            session['user_id'] = 'guest'
         return f(*args, **kwargs)
     return decorated_function
 
@@ -897,11 +894,15 @@ def get_dashboard_statistics():
 # Authentication Routes
 @app.route('/')
 def index():
-    if 'user_id' in session:
+    if 'user_id' in session and session['user_id'] != 'guest':
+        # User is logged in
         return redirect(url_for('welcome'))
     elif 'is_guest' in session:
+        # User is already in guest mode
         return redirect(url_for('welcome'))
-    return redirect(url_for('login'))
+    else:
+        # No session exists, redirect to guest mode
+        return redirect(url_for('guest_mode'))
 
 # Guest mode route
 @app.route('/guest_mode')
@@ -909,7 +910,7 @@ def guest_mode():
     session.clear()
     session['is_guest'] = True
     session['name'] = 'Guest User'
-    session['user_id'] = 'guest'  # Temporary guest ID
+    session['user_id'] = 'guest'
     return redirect(url_for('welcome'))
 
 # Language selection route
@@ -1225,7 +1226,8 @@ def admin_delete_song(song_id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if 'user_id' in session:
+    # If user is already logged in (not guest), redirect to welcome
+    if 'user_id' in session and session['user_id'] != 'guest':
         if session.get('is_admin', False):
             return redirect(url_for('admin_dashboard'))
         return redirect(url_for('welcome'))
@@ -1246,8 +1248,10 @@ def login():
         conn.close()
         
         if user and check_password_hash(user['password'], password):
-            # Set session variables
+            # Clear any existing session (including guest)
             session.clear()
+            
+            # Set session variables for logged in user
             session['user_id'] = user['id']
             session['username'] = user['username']
             session['name'] = user['name']
@@ -1258,7 +1262,6 @@ def login():
             if user['is_admin']:
                 return redirect(url_for('admin_dashboard'))
             
-            # Directly redirect to welcome page (no language check)
             return redirect(url_for('welcome'))
         
         flash('Invalid username or password')
@@ -1267,7 +1270,8 @@ def login():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    if 'user_id' in session:
+    # If user is already logged in (not guest), redirect to welcome
+    if 'user_id' in session and session['user_id'] != 'guest':
         return redirect(url_for('welcome'))
         
     if request.method == 'POST':
@@ -1311,8 +1315,10 @@ def signup():
             ''', (user_id, name, username, email, hashed_password))
             conn.commit()
             
-            # Log the user in
+            # Clear any existing session (including guest)
             session.clear()
+            
+            # Log the user in
             session['user_id'] = user_id
             session['username'] = username
             session['name'] = name
@@ -1322,7 +1328,7 @@ def signup():
             cursor.close()
             conn.close()
             
-            # Always redirect to language selection for new users
+            # Redirect to language selection for new users
             return redirect(url_for('language_selection'))
             
         except Exception as e:
