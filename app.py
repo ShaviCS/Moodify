@@ -1340,10 +1340,12 @@ def signup():
     
     return render_template('signup.html')
 
+# Logout route
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('login'))
+    # After logout, redirect to guest mode instead of login
+    return redirect(url_for('guest_mode'))
 
 # Profile page route
 @app.route('/profile')
