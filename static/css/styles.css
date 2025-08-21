@@ -811,6 +811,63 @@ a:hover {
     font-weight: bold;
 }
 
+.guest-badge {
+    font-size: 0.8em;
+    color: #6c63ff;
+    font-weight: normal;
+}
+
+.guest-avatar {
+    font-size: 24px;
+    color: #6c63ff;
+}
+
+.guest-notification {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 0;
+    text-align: center;
+    position: sticky;
+    top: 60px; /* Adjust based on your header height */
+    z-index: 999;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.guest-notification-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.guest-notification i {
+    font-size: 1.1em;
+}
+
+.login-prompt {
+    color: #fff;
+    text-decoration: underline;
+    font-weight: 500;
+    transition: opacity 0.3s ease;
+}
+
+.login-prompt:hover {
+    opacity: 0.8;
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .guest-notification-content {
+        flex-direction: column;
+        gap: 8px;
+        font-size: 0.9em;
+    }
+}
+
 /* Animations */
 @keyframes pulse {
     0% {

@@ -33,23 +33,50 @@
             <!-- User profile in the navbar -->
             <div class="user-profile-nav">
                 <div class="user-info" id="userInfo">
-                    <span class="user-name">{{ session.get('name', 'User') }}</span>
+                    <span class="user-name">
+                        {{ session.get('name', 'User') }}
+                        {% if session.get('is_guest') %}
+                            <span class="guest-badge">(Guest)</span>
+                        {% endif %}
+                    </span>
                     <div class="user-avatar">
-                        <img src="{{ url_for('static', filename='images/user-avatar.png') }}" alt="User Avatar">
+                        {% if session.get('is_guest') %}
+                            <i class="fas fa-user-secret guest-avatar"></i>
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/user-avatar.png') }}" alt="User Avatar">
+                        {% endif %}
                     </div>
                     <!-- Dropdown menu -->
                     <div class="user-dropdown" id="userDropdown">
                         <ul>
-                            <li><a href="{{ url_for('profile') }}"><i class="fas fa-user"></i> Profile</a></li>
-                            <li><a href="{{ url_for('settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
-                            <li class="dropdown-divider"></li>
-                            <li><a href="{{ url_for('logout') }}" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                            {% if session.get('is_guest') %}
+                                <li><a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> Login / Sign Up</a></li>
+                                <li class="dropdown-divider"></li>
+                            {% else %}
+                                <li><a href="{{ url_for('profile') }}"><i class="fas fa-user"></i> Profile</a></li>
+                                <li><a href="{{ url_for('settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
+                                <li class="dropdown-divider"></li>
+                            {% endif %}
+                            <li><a href="{{ url_for('logout') }}" id="logoutBtn">
+                                <i class="fas fa-sign-out-alt"></i> 
+                                {% if session.get('is_guest') %}Exit Guest Mode{% else %}Logout{% endif %}
+                            </a></li>
                         </ul>
                     </div>
                 </div>
             </div>
         </div>
     </header>
+
+    {% if session.get('is_guest') %}
+    <div class="guest-notification">
+        <div class="guest-notification-content">
+            <i class="fas fa-info-circle"></i>
+            <span>You're using Moodify in guest mode. Your activity won't be saved.</span>
+            <a href="{{ url_for('login') }}" class="login-prompt">Login to save your preferences</a>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Hero Section -->
     <section id="hero-section" class="hero-section">

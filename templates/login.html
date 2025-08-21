@@ -71,6 +71,20 @@
                         Sign in with Google
                     </a>
                 </div>
+
+                <div class="auth-separator">
+                    <span>Or</span>
+                </div>
+
+                <div class="guest-mode-section">
+                    <a href="{{ url_for('guest_mode') }}" class="guest-button">
+                        <i class="fas fa-user-secret"></i>
+                        Continue as Guest
+                    </a>
+                    <p class="guest-note">
+                        <small>Note: Your activity won't be saved in guest mode</small>
+                    </p>
+                </div>
                 
                 <div class="auth-redirect">
                     <p>Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a></p>
